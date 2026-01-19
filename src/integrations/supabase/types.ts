@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          appointment_date: string
+          created_at: string
+          dentist_name: string | null
+          end_time: string
+          google_event_id: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          start_time: string
+          status: string | null
+          title: string
+          treatment_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          created_at?: string
+          dentist_name?: string | null
+          end_time: string
+          google_event_id?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          start_time: string
+          status?: string | null
+          title: string
+          treatment_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          created_at?: string
+          dentist_name?: string | null
+          end_time?: string
+          google_event_id?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          start_time?: string
+          status?: string | null
+          title?: string
+          treatment_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chart_records: {
         Row: {
           cost: number | null
