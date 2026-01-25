@@ -18,24 +18,37 @@ import { Loader2, UserCog } from "lucide-react";
 interface UserProfileEditorProps {
   userId: string;
   currentDisplayName: string | null;
+  currentPhone: string | null;
   userEmail: string;
+}
+
+interface ProfileFormData {
+  displayName: string;
+  phone: string;
 }
 
 export const UserProfileEditor = ({
   userId,
   currentDisplayName,
+  currentPhone,
   userEmail,
 }: UserProfileEditorProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [displayName, setDisplayName] = useState(currentDisplayName || "");
+  const [formData, setFormData] = useState<ProfileFormData>({
+    displayName: currentDisplayName || "",
+    phone: currentPhone || "",
+  });
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (newDisplayName: string) => {
+    mutationFn: async (data: ProfileFormData) => {
       const { error } = await supabase
         .from("profiles")
-        .update({ display_name: newDisplayName || null })
+        .update({ 
+          display_name: data.displayName.trim() || null,
+          phone: data.phone.trim() || null,
+        })
         .eq("user_id", userId);
 
       if (error) throw error;
@@ -44,7 +57,7 @@ export const UserProfileEditor = ({
       queryClient.invalidateQueries({ queryKey: ["usersWithRoles"] });
       toast({
         title: "Profile updated",
-        description: "Display name has been updated successfully.",
+        description: "Profile has been updated successfully.",
       });
       setOpen(false);
     },
@@ -59,7 +72,7 @@ export const UserProfileEditor = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfileMutation.mutate(displayName.trim());
+    updateProfileMutation.mutate(formData);
   };
 
   return (
@@ -73,22 +86,46 @@ export const UserProfileEditor = ({
         <DialogHeader>
           <DialogTitle>Edit User Profile</DialogTitle>
           <DialogDescription>
-            Update the display name for {userEmail}
+            Update profile information for {userEmail}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              value={userEmail}
+              disabled
+              className="bg-muted"
+            />
+            <p className="text-xs text-muted-foreground">
+              Email cannot be changed
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="displayName">Display Name</Label>
             <Input
               id="displayName"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              value={formData.displayName}
+              onChange={(e) => setFormData(prev => ({ ...prev, displayName: e.target.value }))}
               placeholder="Enter display name"
             />
             <p className="text-xs text-muted-foreground">
               Leave empty to show email as the display name
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="Enter phone number"
+            />
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
