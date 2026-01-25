@@ -120,27 +120,44 @@ export const AppointmentForm = ({
   const createAppointment = useMutation({
     mutationFn: async () => {
       const selectedDoctor = doctors?.find((d) => d.id === formData.doctorId);
-      const { error } = await supabase.from("appointments").insert({
+      const dentistName = selectedDoctor ? `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}` : null;
+      const appointmentDate = format(formData.date, "yyyy-MM-dd");
+
+      // Create appointment
+      const { error: appointmentError } = await supabase.from("appointments").insert({
         patient_id: formData.patientId,
         title: formData.treatmentType,
-        appointment_date: format(formData.date, "yyyy-MM-dd"),
+        appointment_date: appointmentDate,
         start_time: formData.startTime,
         end_time: formData.endTime,
         treatment_type: formData.treatmentType,
         doctor_id: formData.doctorId || null,
-        dentist_name: selectedDoctor ? `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}` : null,
+        dentist_name: dentistName,
         notes: formData.notes || null,
         status: formData.status,
       });
 
-      if (error) throw error;
+      if (appointmentError) throw appointmentError;
+
+      // Also create a chart record for this appointment
+      const { error: chartError } = await supabase.from("chart_records").insert({
+        patient_id: formData.patientId,
+        record_date: appointmentDate,
+        treatment_type: formData.treatmentType,
+        description: formData.notes || null,
+        dentist_name: dentistName,
+        status: formData.status === "completed" ? "completed" : "scheduled",
+      });
+
+      if (chartError) throw chartError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["chartRecords"] });
       onOpenChange(false);
       toast({
         title: "Appointment created",
-        description: "The appointment has been scheduled successfully.",
+        description: "The appointment and chart record have been saved.",
       });
     },
     onError: (error) => {
