@@ -30,10 +30,14 @@ const PatientCard = ({
                 {firstName} {lastName}
               </h3>
               {phone && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                <a
+                  href={`tel:${phone}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 hover:text-primary transition-colors"
+                >
                   <Phone className="h-3 w-3 shrink-0" />
                   <span>{phone}</span>
-                </div>
+                </a>
               )}
             </div>
           </div>
