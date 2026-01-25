@@ -10,6 +10,7 @@ import { Plus } from "lucide-react";
 const Appointments = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<string | null>(null);
 
   const { data: appointments, isLoading: appointmentsLoading } = useQuery({
@@ -47,8 +48,9 @@ const Appointments = () => {
     },
   });
 
-  const handleAddAppointment = (date?: Date) => {
+  const handleAddAppointment = (date?: Date, startTime?: string) => {
     if (date) setSelectedDate(date);
+    setSelectedTime(startTime || null);
     setEditingAppointment(null);
     setIsFormOpen(true);
   };
@@ -89,6 +91,7 @@ const Appointments = () => {
         onOpenChange={setIsFormOpen}
         patients={patients || []}
         selectedDate={selectedDate}
+        selectedTime={selectedTime}
         editingAppointmentId={editingAppointment}
         appointments={appointments || []}
       />

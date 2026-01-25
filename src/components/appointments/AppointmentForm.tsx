@@ -33,6 +33,7 @@ interface AppointmentFormProps {
   onOpenChange: (open: boolean) => void;
   patients: Patient[];
   selectedDate: Date;
+  selectedTime?: string | null;
   editingAppointmentId: string | null;
   appointments: AppointmentWithPatient[];
 }
@@ -55,6 +56,7 @@ export const AppointmentForm = ({
   onOpenChange,
   patients,
   selectedDate,
+  selectedTime,
   editingAppointmentId,
   appointments,
 }: AppointmentFormProps) => {
@@ -103,19 +105,25 @@ export const AppointmentForm = ({
         status: editingAppointment.status || "scheduled",
       });
     } else {
+      // Calculate end time (1 hour after start time)
+      const startTime = selectedTime || "09:00";
+      const [hours, minutes] = startTime.split(':').map(Number);
+      const endHours = hours + 1;
+      const endTime = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      
       setFormData((prev) => ({
         ...prev,
         patientId: "",
         date: selectedDate,
-        startTime: "09:00",
-        endTime: "10:00",
+        startTime: startTime,
+        endTime: endTime,
         treatmentType: "",
         doctorId: "",
         notes: "",
         status: "scheduled",
       }));
     }
-  }, [editingAppointment, selectedDate, open]);
+  }, [editingAppointment, selectedDate, selectedTime, open]);
 
   const createAppointment = useMutation({
     mutationFn: async () => {

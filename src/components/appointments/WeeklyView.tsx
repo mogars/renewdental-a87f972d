@@ -20,7 +20,7 @@ type AppointmentWithPatient = Tables<"appointments"> & {
 interface WeeklyViewProps {
   currentDate: Date;
   appointments: AppointmentWithPatient[];
-  onAddAppointment: (date: Date) => void;
+  onAddAppointment: (date: Date, startTime?: string) => void;
   onEditAppointment: (appointmentId: string) => void;
 }
 
@@ -166,19 +166,25 @@ export const WeeklyView = ({
                 const isToday = isSameDay(day, new Date());
                 const totalAppointments = hourAppointments.length;
 
+                const formattedHour = hour.toString().padStart(2, '0') + ':00';
+                
                 return (
                   <div
                     key={`${day.toISOString()}-${hour}`}
                     className={cn(
-                      "group relative h-16 border-r border-border last:border-r-0",
+                      "group relative h-16 border-r border-border last:border-r-0 cursor-pointer hover:bg-muted/50 transition-colors",
                       isToday && "bg-primary/5"
                     )}
+                    onClick={() => onAddAppointment(day, formattedHour)}
                   >
                     <Button
                       variant="ghost"
                       size="icon"
                       className="absolute right-1 top-1 z-10 h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={() => onAddAppointment(day)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddAppointment(day, formattedHour);
+                      }}
                     >
                       <Plus className="h-3 w-3" />
                     </Button>
@@ -191,7 +197,10 @@ export const WeeklyView = ({
                       return (
                         <button
                           key={apt.id}
-                          onClick={() => onEditAppointment(apt.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditAppointment(apt.id);
+                          }}
                           style={position}
                           className={cn(
                             "absolute overflow-hidden rounded-r px-1.5 py-0.5 text-left text-xs transition-all hover:z-20 hover:shadow-md border-l-2",
