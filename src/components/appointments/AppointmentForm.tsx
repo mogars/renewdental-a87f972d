@@ -172,33 +172,68 @@ export const AppointmentForm = ({
 
   const updateAppointment = useMutation({
     mutationFn: async () => {
-      if (!editingAppointmentId) return;
+      if (!editingAppointmentId || !editingAppointment) return;
 
       const selectedDoctor = doctors?.find((d) => d.id === formData.doctorId);
-      const { error } = await supabase
+      const dentistName = selectedDoctor ? `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}` : null;
+      const newAppointmentDate = format(formData.date, "yyyy-MM-dd");
+
+      // Update appointment
+      const { error: appointmentError } = await supabase
         .from("appointments")
         .update({
           patient_id: formData.patientId,
           title: formData.treatmentType,
-          appointment_date: format(formData.date, "yyyy-MM-dd"),
+          appointment_date: newAppointmentDate,
           start_time: formData.startTime,
           end_time: formData.endTime,
           treatment_type: formData.treatmentType,
           doctor_id: formData.doctorId || null,
-          dentist_name: selectedDoctor ? `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}` : null,
+          dentist_name: dentistName,
           notes: formData.notes || null,
           status: formData.status,
         })
         .eq("id", editingAppointmentId);
 
-      if (error) throw error;
+      if (appointmentError) throw appointmentError;
+
+      // Try to find and update the corresponding chart record
+      // Match by original patient_id, record_date, and treatment_type
+      const originalDate = editingAppointment.appointment_date;
+      const originalTreatmentType = editingAppointment.treatment_type;
+
+      const { data: existingRecord } = await supabase
+        .from("chart_records")
+        .select("id")
+        .eq("patient_id", editingAppointment.patient_id)
+        .eq("record_date", originalDate)
+        .eq("treatment_type", originalTreatmentType || "")
+        .maybeSingle();
+
+      if (existingRecord) {
+        // Update existing chart record
+        const { error: chartError } = await supabase
+          .from("chart_records")
+          .update({
+            patient_id: formData.patientId,
+            record_date: newAppointmentDate,
+            treatment_type: formData.treatmentType,
+            description: formData.notes || null,
+            dentist_name: dentistName,
+            status: formData.status === "completed" ? "completed" : formData.status === "cancelled" ? "cancelled" : "scheduled",
+          })
+          .eq("id", existingRecord.id);
+
+        if (chartError) throw chartError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["chartRecords"] });
       onOpenChange(false);
       toast({
         title: "Appointment updated",
-        description: "The appointment has been updated successfully.",
+        description: "The appointment and chart record have been updated.",
       });
     },
     onError: (error) => {
