@@ -19,6 +19,34 @@ interface Appointment {
   } | null;
 }
 
+function normalizePhoneNumber(phone: string): string {
+  // Remove any spaces, dashes, or parentheses
+  let cleaned = phone.replace(/[\s\-\(\)]/g, "");
+  
+  // If already in E.164 format, return as-is
+  if (cleaned.startsWith("+")) {
+    return cleaned;
+  }
+  
+  // Romanian numbers: convert 07xx to +407xx
+  if (cleaned.startsWith("07") && cleaned.length === 10) {
+    return `+4${cleaned}`;
+  }
+  
+  // Romanian numbers: convert 007xx to +407xx
+  if (cleaned.startsWith("007") && cleaned.length === 11) {
+    return `+4${cleaned.slice(2)}`;
+  }
+  
+  // If starts with country code without +, add +
+  if (cleaned.startsWith("40") && cleaned.length === 11) {
+    return `+${cleaned}`;
+  }
+  
+  // Default: assume it needs Romanian country code
+  return `+40${cleaned}`;
+}
+
 async function sendTwilioSMS(to: string, body: string): Promise<boolean> {
   const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
   const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
@@ -150,6 +178,16 @@ serve(async (req) => {
       throw error;
     }
 
+    // Fetch the SMS template from app_settings
+    const { data: templateSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "sms_template")
+      .maybeSingle();
+
+    const defaultTemplate = "Hi {patient_name}! This is a reminder for your dental appointment on {appointment_date} at {appointment_time}. Please reply CONFIRM to confirm or call us to reschedule. - DentaCare";
+    const template = templateSetting?.value || defaultTemplate;
+
     const results: { success: boolean; appointmentId: string; type: string }[] = [];
 
     for (const apt of (appointments || []) as unknown as Appointment[]) {
@@ -173,19 +211,25 @@ serve(async (req) => {
         day: "numeric",
       });
 
+      // Build the message from template
+      const message = template
+        .replace(/{patient_name}/g, patientName)
+        .replace(/{appointment_date}/g, appointmentDateStr)
+        .replace(/{appointment_time}/g, appointmentTime);
+
+      // Normalize phone number to E.164 format
+      const normalizedPhone = normalizePhoneNumber(apt.patients.phone);
+
       // Send 24-hour reminder (between 23 and 25 hours before)
       if (timeDiffHours >= 23 && timeDiffHours <= 25) {
-        const message = `Hi ${patientName}! This is a reminder that you have a dental appointment tomorrow, ${appointmentDateStr} at ${appointmentTime}. Please reply CONFIRM to confirm or call us to reschedule. - DentaCare`;
-        
-        const success = await sendTwilioSMS(apt.patients.phone, message);
+        const success = await sendTwilioSMS(normalizedPhone, message);
         results.push({ success, appointmentId: apt.id, type: "24h" });
       }
 
       // Send 1-hour reminder (between 55 and 65 minutes before)
       if (timeDiffHours >= 0.917 && timeDiffHours <= 1.083) {
-        const message = `Hi ${patientName}! Just a reminder that your dental appointment is in 1 hour at ${appointmentTime}. We look forward to seeing you! - DentaCare`;
-        
-        const success = await sendTwilioSMS(apt.patients.phone, message);
+        const hourMessage = `Hi ${patientName}! Just a reminder that your dental appointment is in 1 hour at ${appointmentTime}. We look forward to seeing you! - DentaCare`;
+        const success = await sendTwilioSMS(normalizedPhone, hourMessage);
         results.push({ success, appointmentId: apt.id, type: "1h" });
       }
     }
