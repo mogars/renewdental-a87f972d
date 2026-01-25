@@ -180,7 +180,10 @@ export const WeeklyView = ({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute right-1 top-1 z-10 h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100"
+                      className={cn(
+                        "absolute right-1 top-1 z-10 h-5 w-5 transition-opacity",
+                        totalAppointments > 0 ? "opacity-70 hover:opacity-100" : "opacity-0 group-hover:opacity-100"
+                      )}
                       onClick={(e) => {
                         e.stopPropagation();
                         onAddAppointment(day, formattedHour);
