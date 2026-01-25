@@ -1,8 +1,10 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Header = () => {
@@ -10,6 +12,20 @@ const Header = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+
+  const { data: profile } = useQuery({
+    queryKey: ["userProfile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
   const navItems = [
     { href: "/", label: "Home" },
@@ -81,9 +97,10 @@ const Header = () => {
 
           {user && (
             <div className="flex items-center gap-2 pl-4 border-l border-border">
-              <span className="text-sm text-muted-foreground hidden md:inline">
-                {user.email}
-              </span>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground hidden md:flex">
+                <User className="h-4 w-4" />
+                <span>{profile?.display_name || user.email}</span>
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
