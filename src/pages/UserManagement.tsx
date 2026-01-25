@@ -14,6 +14,7 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 interface UserWithRoles {
   id: string;
   email: string;
+  displayName: string | null;
   roles: AppRole[];
 }
 
@@ -30,12 +31,27 @@ const UserManagement = () => {
   const { data: users, isLoading, error } = useQuery({
     queryKey: ["usersWithRoles"],
     queryFn: async () => {
+      // Fetch roles
       const { data: rolesData, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role");
 
       if (rolesError) throw rolesError;
 
+      // Fetch profiles for email addresses and display names
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, email, display_name");
+
+      if (profilesError) throw profilesError;
+
+      // Create profile lookup map
+      const profileByUser = profilesData.reduce((acc, { user_id, email, display_name }) => {
+        acc[user_id] = { email, displayName: display_name };
+        return acc;
+      }, {} as Record<string, { email: string; displayName: string | null }>);
+
+      // Group roles by user
       const rolesByUser = rolesData.reduce((acc, { user_id, role }) => {
         if (!acc[user_id]) acc[user_id] = [];
         acc[user_id].push(role);
@@ -46,7 +62,8 @@ const UserManagement = () => {
 
       const users: UserWithRoles[] = userIds.map((userId) => ({
         id: userId,
-        email: `User ${userId.slice(0, 8)}...`,
+        email: profileByUser[userId]?.email || `User ${userId.slice(0, 8)}...`,
+        displayName: profileByUser[userId]?.displayName || null,
         roles: rolesByUser[userId] || [],
       }));
 

@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Users } from "lucide-react";
 import { UserRoleEditor } from "./UserRoleEditor";
+import { UserProfileEditor } from "./UserProfileEditor";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -9,6 +10,7 @@ interface UserCardProps {
   user: {
     id: string;
     email: string;
+    displayName: string | null;
     roles: AppRole[];
   };
 }
@@ -21,7 +23,12 @@ export const UserCard = ({ user }: UserCardProps) => {
           <Users className="h-5 w-5" />
         </div>
         <div>
-          <p className="font-medium text-foreground">{user.email}</p>
+          <p className="font-medium text-foreground">
+            {user.displayName || user.email}
+          </p>
+          {user.displayName && (
+            <p className="text-sm text-muted-foreground">{user.email}</p>
+          )}
           <p className="text-xs text-muted-foreground">ID: {user.id.slice(0, 8)}...</p>
         </div>
       </div>
@@ -41,9 +48,14 @@ export const UserCard = ({ user }: UserCardProps) => {
             <span className="text-sm text-muted-foreground">No roles assigned</span>
           )}
         </div>
+        <UserProfileEditor
+          userId={user.id}
+          currentDisplayName={user.displayName}
+          userEmail={user.email}
+        />
         <UserRoleEditor
           userId={user.id}
-          userEmail={user.email}
+          userEmail={user.displayName || user.email}
           currentRoles={user.roles}
         />
       </div>
