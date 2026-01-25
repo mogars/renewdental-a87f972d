@@ -105,10 +105,14 @@ serve(async (req) => {
       const { data: roleData } = await serviceClient
         .from("user_roles")
         .select("role")
-        .eq("user_id", data.user.id)
-        .maybeSingle();
+        .eq("user_id", data.user.id);
 
-      if (!roleData || !["admin", "staff", "dentist"].includes(roleData.role)) {
+      const userRoles = roleData?.map((r) => r.role) || [];
+      const hasValidRole = userRoles.some((role) => 
+        ["admin", "staff", "dentist"].includes(role)
+      );
+
+      if (!hasValidRole) {
         return new Response(
           JSON.stringify({ error: "Insufficient permissions" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
