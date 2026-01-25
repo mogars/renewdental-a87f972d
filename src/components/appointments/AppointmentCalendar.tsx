@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, parseISO } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Plus, Calendar, List, LayoutGrid } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronLeft, ChevronRight, Plus, Calendar, List, LayoutGrid, Users, Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DailyAgenda } from "./DailyAgenda";
 import { WeeklyView } from "./WeeklyView";
 import { Tables } from "@/integrations/supabase/types";
 
+type Doctor = Tables<"doctors">;
 type AppointmentWithPatient = Tables<"appointments"> & {
   patients: {
     id: string;
@@ -34,6 +38,25 @@ export const AppointmentCalendar = ({
 }: AppointmentCalendarProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day">("week");
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>("all");
+
+  // Fetch doctors for the filter dropdown
+  const { data: doctors } = useQuery({
+    queryKey: ["doctors"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("doctors")
+        .select("*")
+        .order("last_name", { ascending: true });
+      if (error) throw error;
+      return data as Doctor[];
+    },
+  });
+
+  // Filter appointments based on selected doctor
+  const filteredAppointments = selectedDoctorId === "all"
+    ? appointments
+    : appointments.filter((apt) => apt.doctor_id === selectedDoctorId);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -42,7 +65,7 @@ export const AppointmentCalendar = ({
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const getAppointmentsForDay = (date: Date) => {
-    return appointments.filter(
+    return filteredAppointments.filter(
       (apt) => isSameDay(parseISO(apt.appointment_date), date)
     );
   };
@@ -71,44 +94,94 @@ export const AppointmentCalendar = ({
     setCurrentDate(new Date());
   };
 
+  // Get current doctor name for display
+  const currentDoctorName = selectedDoctorId === "all"
+    ? "All Doctors"
+    : doctors?.find((d) => d.id === selectedDoctorId)
+      ? `Dr. ${doctors.find((d) => d.id === selectedDoctorId)!.first_name} ${doctors.find((d) => d.id === selectedDoctorId)!.last_name}`
+      : "Select Doctor";
+
   return (
     <Card className="shadow-card">
-      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={navigatePrevious}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <CardTitle className="min-w-[200px] text-center font-display">
-            {view === "day"
-              ? format(currentDate, "EEEE, MMMM d, yyyy")
-              : view === "week"
-              ? `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d, yyyy")}`
-              : format(currentDate, "MMMM yyyy")}
-          </CardTitle>
-          <Button variant="outline" size="icon" onClick={navigateNext}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={goToToday}>
-            Today
-          </Button>
+      <CardHeader className="flex flex-col gap-4">
+        {/* Doctor filter dropdown */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
+              <SelectTrigger className="w-[250px]">
+                <div className="flex items-center gap-2">
+                  {selectedDoctorId === "all" ? (
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Stethoscope className="h-4 w-4 text-primary" />
+                  )}
+                  <SelectValue placeholder="Select doctor" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    All Doctors (Clinic View)
+                  </div>
+                </SelectItem>
+                {doctors?.map((doctor) => (
+                  <SelectItem key={doctor.id} value={doctor.id}>
+                    <div className="flex items-center gap-2">
+                      <Stethoscope className="h-4 w-4" />
+                      Dr. {doctor.first_name} {doctor.last_name}
+                      {doctor.specialty && (
+                        <span className="text-muted-foreground">({doctor.specialty})</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">
+              {filteredAppointments.length} appointment{filteredAppointments.length !== 1 ? "s" : ""}
+            </span>
+          </div>
         </div>
 
-        <Tabs value={view} onValueChange={(v) => setView(v as "month" | "week" | "day")}>
-          <TabsList>
-            <TabsTrigger value="month" className="gap-2">
-              <LayoutGrid className="h-4 w-4" />
-              <span className="hidden sm:inline">Month</span>
-            </TabsTrigger>
-            <TabsTrigger value="week" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">Week</span>
-            </TabsTrigger>
-            <TabsTrigger value="day" className="gap-2">
-              <List className="h-4 w-4" />
-              <span className="hidden sm:inline">Day</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Navigation and view tabs */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="icon" onClick={navigatePrevious}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <CardTitle className="min-w-[200px] text-center font-display">
+              {view === "day"
+                ? format(currentDate, "EEEE, MMMM d, yyyy")
+                : view === "week"
+                ? `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d, yyyy")}`
+                : format(currentDate, "MMMM yyyy")}
+            </CardTitle>
+            <Button variant="outline" size="icon" onClick={navigateNext}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={goToToday}>
+              Today
+            </Button>
+          </div>
+
+          <Tabs value={view} onValueChange={(v) => setView(v as "month" | "week" | "day")}>
+            <TabsList>
+              <TabsTrigger value="month" className="gap-2">
+                <LayoutGrid className="h-4 w-4" />
+                <span className="hidden sm:inline">Month</span>
+              </TabsTrigger>
+              <TabsTrigger value="week" className="gap-2">
+                <Calendar className="h-4 w-4" />
+                <span className="hidden sm:inline">Week</span>
+              </TabsTrigger>
+              <TabsTrigger value="day" className="gap-2">
+                <List className="h-4 w-4" />
+                <span className="hidden sm:inline">Day</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </CardHeader>
 
       <CardContent>
@@ -197,14 +270,14 @@ export const AppointmentCalendar = ({
         ) : view === "week" ? (
           <WeeklyView
             currentDate={currentDate}
-            appointments={appointments}
+            appointments={filteredAppointments}
             onAddAppointment={onAddAppointment}
             onEditAppointment={onEditAppointment}
           />
         ) : (
           <DailyAgenda
             date={currentDate}
-            appointments={appointments.filter((apt) =>
+            appointments={filteredAppointments.filter((apt) =>
               isSameDay(parseISO(apt.appointment_date), currentDate)
             )}
             onAddAppointment={() => onAddAppointment(currentDate)}
