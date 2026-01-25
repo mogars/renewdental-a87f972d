@@ -259,10 +259,10 @@ const PatientDetail = () => {
           Back to Patients
         </Button>
 
-        <div className="flex gap-6 h-[calc(100vh-180px)]">
+        <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-180px)]">
           {/* Left Panel - Patient Info */}
-          <div className="w-80 shrink-0">
-            <Card className="gradient-card border-border/50 shadow-card h-full overflow-auto">
+          <div className="w-full lg:w-80 lg:shrink-0">
+            <Card className="gradient-card border-border/50 shadow-card lg:h-full overflow-auto">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-4">
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground font-semibold text-lg">
