@@ -21,7 +21,8 @@ const Patients = () => {
       const { data, error } = await supabase
         .from("patients")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("last_name", { ascending: true })
+        .order("first_name", { ascending: true });
 
       if (error) throw error;
       return data;
@@ -119,10 +120,7 @@ const Patients = () => {
                 id={patient.id}
                 firstName={patient.first_name}
                 lastName={patient.last_name}
-                email={patient.email}
                 phone={patient.phone}
-                dateOfBirth={patient.date_of_birth}
-                insuranceProvider={patient.insurance_provider}
               />
             ))}
           </div>
