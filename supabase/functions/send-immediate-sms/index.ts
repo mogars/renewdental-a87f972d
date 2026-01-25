@@ -170,7 +170,17 @@ serve(async (req) => {
       );
     }
 
-    // Format the message
+    // Fetch the SMS template from app_settings
+    const { data: templateSetting } = await serviceClient
+      .from("app_settings")
+      .select("value")
+      .eq("key", "sms_template")
+      .maybeSingle();
+
+    const defaultTemplate = "Hi {patient_name}! This is a reminder for your dental appointment on {appointment_date} at {appointment_time}. Please reply CONFIRM to confirm or call us to reschedule. - DentaCare";
+    const template = templateSetting?.value || defaultTemplate;
+
+    // Format the message using the template
     const appointmentTime = appointment.start_time.slice(0, 5);
     const appointmentDateStr = new Date(appointment.appointment_date).toLocaleDateString("en-US", {
       weekday: "long",
@@ -178,7 +188,10 @@ serve(async (req) => {
       day: "numeric",
     });
 
-    const message = `Hi ${patient.first_name}! This is a reminder for your dental appointment on ${appointmentDateStr} at ${appointmentTime}. Please reply CONFIRM to confirm or call us to reschedule. - DentaCare`;
+    const message = template
+      .replace(/{patient_name}/g, patient.first_name)
+      .replace(/{appointment_date}/g, appointmentDateStr)
+      .replace(/{appointment_time}/g, appointmentTime);
 
     // Normalize phone number to E.164 format and send the SMS
     const normalizedPhone = normalizePhoneNumber(patient.phone);
