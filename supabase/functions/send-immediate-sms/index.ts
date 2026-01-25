@@ -6,6 +6,34 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function normalizePhoneNumber(phone: string): string {
+  // Remove any spaces, dashes, or parentheses
+  let cleaned = phone.replace(/[\s\-\(\)]/g, "");
+  
+  // If already in E.164 format, return as-is
+  if (cleaned.startsWith("+")) {
+    return cleaned;
+  }
+  
+  // Romanian numbers: convert 07xx to +407xx
+  if (cleaned.startsWith("07") && cleaned.length === 10) {
+    return `+4${cleaned}`;
+  }
+  
+  // Romanian numbers: convert 007xx to +407xx
+  if (cleaned.startsWith("007") && cleaned.length === 11) {
+    return `+4${cleaned.slice(2)}`;
+  }
+  
+  // If starts with country code without +, add +
+  if (cleaned.startsWith("40") && cleaned.length === 11) {
+    return `+${cleaned}`;
+  }
+  
+  // Default: assume it needs Romanian country code
+  return `+40${cleaned}`;
+}
+
 async function sendTwilioSMS(to: string, body: string): Promise<{ success: boolean; error?: string }> {
   const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
   const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
@@ -152,8 +180,9 @@ serve(async (req) => {
 
     const message = `Hi ${patient.first_name}! This is a reminder for your dental appointment on ${appointmentDateStr} at ${appointmentTime}. Please reply CONFIRM to confirm or call us to reschedule. - DentaCare`;
 
-    // Send the SMS
-    const result = await sendTwilioSMS(patient.phone, message);
+    // Normalize phone number to E.164 format and send the SMS
+    const normalizedPhone = normalizePhoneNumber(patient.phone);
+    const result = await sendTwilioSMS(normalizedPhone, message);
 
     if (result.success) {
       return new Response(
