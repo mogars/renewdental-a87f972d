@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Header from "@/components/Header";
 import PatientForm, { PatientFormData } from "@/components/PatientForm";
 import ChartRecordForm, { ChartRecordFormData } from "@/components/ChartRecordForm";
 import ChartRecordsTable from "@/components/ChartRecordsTable";
+import ChartRecordCard from "@/components/ChartRecordCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +40,7 @@ const PatientDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   const [isEditPatientOpen, setIsEditPatientOpen] = useState(false);
   const [isAddRecordOpen, setIsAddRecordOpen] = useState(false);
@@ -353,13 +356,35 @@ const PatientDetail = () => {
               </Button>
             </div>
 
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto space-y-3">
               {isLoadingRecords ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
                     <div key={i} className="h-12 animate-pulse rounded bg-muted" />
                   ))}
                 </div>
+              ) : isMobile ? (
+                chartRecords && chartRecords.length > 0 ? (
+                  chartRecords.map((record) => (
+                    <ChartRecordCard
+                      key={record.id}
+                      id={record.id}
+                      recordDate={record.record_date}
+                      treatmentType={record.treatment_type}
+                      toothNumber={record.tooth_number}
+                      description={record.description}
+                      dentistName={record.dentist_name}
+                      cost={record.cost}
+                      status={record.status}
+                      onEdit={handleEditRecord}
+                      onDelete={handleDeleteRecord}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    No chart records yet
+                  </div>
+                )
               ) : (
                 <ChartRecordsTable
                   records={chartRecords || []}
