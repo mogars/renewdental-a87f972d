@@ -1,16 +1,14 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
-import { LogOut, Shield } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { isAdmin } = useUserRole();
   const { toast } = useToast();
 
   const navItems = [
@@ -18,7 +16,6 @@ const Header = () => {
     { href: "/patients", label: "Patients" },
     { href: "/appointments", label: "Appointments" },
     { href: "/settings", label: "Settings" },
-    ...(isAdmin ? [{ href: "/admin/users", label: "Users", icon: Shield }] : []),
   ];
 
   const handleSignOut = async () => {
