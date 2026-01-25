@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { DailyAgenda } from "./DailyAgenda";
 import { WeeklyView } from "./WeeklyView";
 import { Tables } from "@/integrations/supabase/types";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Doctor = Tables<"doctors">;
 type AppointmentWithPatient = Tables<"appointments"> & {
@@ -36,9 +37,17 @@ export const AppointmentCalendar = ({
   onAddAppointment,
   onEditAppointment,
 }: AppointmentCalendarProps) => {
+  const isMobile = useIsMobile();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day">("week");
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("all");
+
+  // Auto-switch to day view on mobile for better UX
+  useEffect(() => {
+    if (isMobile && view === "week") {
+      setView("day");
+    }
+  }, [isMobile]);
 
   // Fetch doctors for the filter dropdown
   const { data: doctors } = useQuery({
@@ -103,12 +112,12 @@ export const AppointmentCalendar = ({
 
   return (
     <Card className="shadow-card">
-      <CardHeader className="flex flex-col gap-4">
+      <CardHeader className="flex flex-col gap-4 px-3 sm:px-6">
         {/* Doctor filter dropdown */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
-              <SelectTrigger className="w-[250px]">
+              <SelectTrigger className="w-full sm:w-[250px]">
                 <div className="flex items-center gap-2">
                   {selectedDoctorId === "all" ? (
                     <Users className="h-4 w-4 text-muted-foreground" />
@@ -145,46 +154,51 @@ export const AppointmentCalendar = ({
         </div>
 
         {/* Navigation and view tabs */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" onClick={navigatePrevious}>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <Button variant="outline" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={navigatePrevious}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <CardTitle className="min-w-[200px] text-center font-display">
+            <CardTitle className="flex-1 text-center font-display text-sm sm:text-lg">
               {view === "day"
-                ? format(currentDate, "EEEE, MMMM d, yyyy")
+                ? format(currentDate, isMobile ? "EEE, MMM d" : "EEEE, MMMM d, yyyy")
                 : view === "week"
-                ? `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d, yyyy")}`
-                : format(currentDate, "MMMM yyyy")}
+                ? isMobile 
+                  ? `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "d")}`
+                  : `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d, yyyy")}`
+                : format(currentDate, isMobile ? "MMM yyyy" : "MMMM yyyy")}
             </CardTitle>
-            <Button variant="outline" size="icon" onClick={navigateNext}>
+            <Button variant="outline" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={navigateNext}>
               <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={goToToday}>
-              Today
             </Button>
           </div>
 
-          <Tabs value={view} onValueChange={(v) => setView(v as "month" | "week" | "day")}>
-            <TabsList>
-              <TabsTrigger value="month" className="gap-2">
-                <LayoutGrid className="h-4 w-4" />
-                <span className="hidden sm:inline">Month</span>
-              </TabsTrigger>
-              <TabsTrigger value="week" className="gap-2">
-                <Calendar className="h-4 w-4" />
-                <span className="hidden sm:inline">Week</span>
-              </TabsTrigger>
-              <TabsTrigger value="day" className="gap-2">
-                <List className="h-4 w-4" />
-                <span className="hidden sm:inline">Day</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center justify-between gap-2">
+            <Button variant="ghost" size="sm" onClick={goToToday} className="text-xs sm:text-sm">
+              Today
+            </Button>
+            
+            <Tabs value={view} onValueChange={(v) => setView(v as "month" | "week" | "day")}>
+              <TabsList className="h-8 sm:h-10">
+                <TabsTrigger value="month" className="gap-1 px-2 sm:gap-2 sm:px-3 text-xs sm:text-sm">
+                  <LayoutGrid className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Month</span>
+                </TabsTrigger>
+                <TabsTrigger value="week" className="gap-1 px-2 sm:gap-2 sm:px-3 text-xs sm:text-sm">
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Week</span>
+                </TabsTrigger>
+                <TabsTrigger value="day" className="gap-1 px-2 sm:gap-2 sm:px-3 text-xs sm:text-sm">
+                  <List className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Day</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="px-2 sm:px-6">
         {isLoading ? (
           <div className="flex h-96 items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -193,10 +207,10 @@ export const AppointmentCalendar = ({
           <div className="overflow-hidden rounded-lg border border-border">
             {/* Day headers */}
             <div className="grid grid-cols-7 bg-muted">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+              {(isMobile ? ["M", "T", "W", "T", "F", "S", "S"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]).map((day, i) => (
                 <div
-                  key={day}
-                  className="border-b border-r border-border p-2 text-center text-sm font-medium text-muted-foreground last:border-r-0"
+                  key={`${day}-${i}`}
+                  className="border-b border-r border-border p-1 sm:p-2 text-center text-xs sm:text-sm font-medium text-muted-foreground last:border-r-0"
                 >
                   {day}
                 </div>
@@ -213,8 +227,12 @@ export const AppointmentCalendar = ({
                 return (
                   <div
                     key={day.toISOString()}
+                    onClick={() => {
+                      setCurrentDate(day);
+                      if (isMobile) setView("day");
+                    }}
                     className={cn(
-                      "min-h-[100px] border-b border-r border-border p-1 transition-colors hover:bg-muted/50",
+                      "min-h-[60px] sm:min-h-[100px] border-b border-r border-border p-0.5 sm:p-1 transition-colors hover:bg-muted/50 cursor-pointer",
                       !isCurrentMonth && "bg-muted/30",
                       index % 7 === 6 && "border-r-0",
                       index >= days.length - 7 && "border-b-0"
@@ -223,7 +241,7 @@ export const AppointmentCalendar = ({
                     <div className="flex items-center justify-between">
                       <span
                         className={cn(
-                          "flex h-7 w-7 items-center justify-center rounded-full text-sm",
+                          "flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded-full text-xs sm:text-sm",
                           isToday && "bg-primary text-primary-foreground font-semibold",
                           !isCurrentMonth && "text-muted-foreground"
                         )}
@@ -233,19 +251,25 @@ export const AppointmentCalendar = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 hover:opacity-100"
-                        onClick={() => onAddAppointment(day)}
+                        className="h-5 w-5 sm:h-6 sm:w-6 opacity-0 transition-opacity group-hover:opacity-100 hover:opacity-100 hidden sm:flex"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddAppointment(day);
+                        }}
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
                     </div>
-                    <div className="mt-1 space-y-1">
-                      {dayAppointments.slice(0, 3).map((apt) => (
+                    <div className="mt-0.5 sm:mt-1 space-y-0.5 sm:space-y-1">
+                      {dayAppointments.slice(0, isMobile ? 2 : 3).map((apt) => (
                         <button
                           key={apt.id}
-                          onClick={() => onEditAppointment(apt.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditAppointment(apt.id);
+                          }}
                           className={cn(
-                            "w-full truncate rounded px-1.5 py-0.5 text-left text-xs transition-colors",
+                            "w-full truncate rounded px-1 sm:px-1.5 py-0.5 text-left text-[10px] sm:text-xs transition-colors",
                             apt.status === "completed"
                               ? "bg-success/20 text-success hover:bg-success/30"
                               : apt.status === "cancelled"
@@ -253,7 +277,7 @@ export const AppointmentCalendar = ({
                               : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                           )}
                         >
-                          {apt.start_time.slice(0, 5)} {apt.patients?.first_name}
+                          {isMobile ? apt.start_time.slice(0, 5) : `${apt.start_time.slice(0, 5)} ${apt.patients?.first_name}`}
                         </button>
                       ))}
                       {dayAppointments.length > 3 && (
