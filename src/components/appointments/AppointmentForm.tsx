@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,6 +17,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { PatientCombobox } from "./PatientCombobox";
 
 type Patient = Tables<"patients">;
+type Doctor = Tables<"doctors">;
 type AppointmentWithPatient = Tables<"appointments"> & {
   patients: {
     id: string;
@@ -71,9 +72,23 @@ export const AppointmentForm = ({
     startTime: "09:00",
     endTime: "10:00",
     treatmentType: "",
-    dentistName: "",
+    doctorId: "",
     notes: "",
     status: "scheduled",
+  });
+
+  // Fetch active doctors for the dropdown
+  const { data: doctors } = useQuery({
+    queryKey: ["doctors", "active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("doctors")
+        .select("*")
+        .eq("is_active", true)
+        .order("last_name", { ascending: true });
+      if (error) throw error;
+      return data as Doctor[];
+    },
   });
 
   useEffect(() => {
@@ -85,7 +100,7 @@ export const AppointmentForm = ({
         startTime: editingAppointment.start_time.slice(0, 5),
         endTime: editingAppointment.end_time.slice(0, 5),
         treatmentType: editingAppointment.treatment_type || "",
-        dentistName: editingAppointment.dentist_name || "",
+        doctorId: editingAppointment.doctor_id || "",
         notes: editingAppointment.notes || "",
         status: editingAppointment.status || "scheduled",
       });
@@ -98,7 +113,7 @@ export const AppointmentForm = ({
         startTime: "09:00",
         endTime: "10:00",
         treatmentType: "",
-        dentistName: "",
+        doctorId: "",
         notes: "",
         status: "scheduled",
       }));
@@ -107,6 +122,7 @@ export const AppointmentForm = ({
 
   const createAppointment = useMutation({
     mutationFn: async () => {
+      const selectedDoctor = doctors?.find((d) => d.id === formData.doctorId);
       const { error } = await supabase.from("appointments").insert({
         patient_id: formData.patientId,
         title: formData.title,
@@ -114,7 +130,8 @@ export const AppointmentForm = ({
         start_time: formData.startTime,
         end_time: formData.endTime,
         treatment_type: formData.treatmentType || null,
-        dentist_name: formData.dentistName || null,
+        doctor_id: formData.doctorId || null,
+        dentist_name: selectedDoctor ? `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}` : null,
         notes: formData.notes || null,
         status: formData.status,
       });
@@ -143,6 +160,7 @@ export const AppointmentForm = ({
     mutationFn: async () => {
       if (!editingAppointmentId) return;
 
+      const selectedDoctor = doctors?.find((d) => d.id === formData.doctorId);
       const { error } = await supabase
         .from("appointments")
         .update({
@@ -152,7 +170,8 @@ export const AppointmentForm = ({
           start_time: formData.startTime,
           end_time: formData.endTime,
           treatment_type: formData.treatmentType || null,
-          dentist_name: formData.dentistName || null,
+          doctor_id: formData.doctorId || null,
+          dentist_name: selectedDoctor ? `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}` : null,
           notes: formData.notes || null,
           status: formData.status,
         })
@@ -318,13 +337,29 @@ export const AppointmentForm = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dentistName">Dentist Name</Label>
-            <Input
-              id="dentistName"
-              value={formData.dentistName}
-              onChange={(e) => setFormData((prev) => ({ ...prev, dentistName: e.target.value }))}
-              placeholder="Dr. Smith"
-            />
+            <Label>Doctor *</Label>
+            <Select
+              value={formData.doctorId}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, doctorId: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a doctor" />
+              </SelectTrigger>
+              <SelectContent>
+                {doctors && doctors.length > 0 ? (
+                  doctors.map((doctor) => (
+                    <SelectItem key={doctor.id} value={doctor.id}>
+                      Dr. {doctor.first_name} {doctor.last_name}
+                      {doctor.specialty && ` (${doctor.specialty})`}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-doctors" disabled>
+                    No doctors available. Add doctors in Settings.
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
           {editingAppointmentId && (
@@ -381,7 +416,7 @@ export const AppointmentForm = ({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !formData.patientId || !formData.title}>
+            <Button type="submit" disabled={isLoading || !formData.patientId || !formData.title || !formData.doctorId}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingAppointmentId ? "Update" : "Create"}
             </Button>
