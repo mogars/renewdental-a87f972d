@@ -106,6 +106,20 @@ serve(async (req) => {
       }
     }
 
+    // Create profile for the new user (trigger should handle this, but ensure it exists)
+    if (newUser.user) {
+      const { error: profileError } = await adminClient
+        .from("profiles")
+        .upsert({ 
+          user_id: newUser.user.id, 
+          email: newUser.user.email 
+        }, { onConflict: 'user_id' });
+
+      if (profileError) {
+        console.error("Failed to create profile:", profileError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

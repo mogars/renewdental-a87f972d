@@ -28,12 +28,27 @@ export const UsersTab = () => {
   const { data: users, isLoading, error } = useQuery({
     queryKey: ["usersWithRoles"],
     queryFn: async () => {
+      // Fetch roles
       const { data: rolesData, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role");
 
       if (rolesError) throw rolesError;
 
+      // Fetch profiles for email addresses
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, email");
+
+      if (profilesError) throw profilesError;
+
+      // Create email lookup map
+      const emailByUser = profilesData.reduce((acc, { user_id, email }) => {
+        acc[user_id] = email;
+        return acc;
+      }, {} as Record<string, string>);
+
+      // Group roles by user
       const rolesByUser = rolesData.reduce((acc, { user_id, role }) => {
         if (!acc[user_id]) acc[user_id] = [];
         acc[user_id].push(role);
@@ -44,7 +59,7 @@ export const UsersTab = () => {
 
       const users: UserWithRoles[] = userIds.map((userId) => ({
         id: userId,
-        email: `User ${userId.slice(0, 8)}...`,
+        email: emailByUser[userId] || `User ${userId.slice(0, 8)}...`,
         roles: rolesByUser[userId] || [],
       }));
 
