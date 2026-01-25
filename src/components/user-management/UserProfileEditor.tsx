@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -14,23 +15,35 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserCog } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
+
+type AppRole = Database["public"]["Enums"]["app_role"];
+
+const AVAILABLE_ROLES: { value: AppRole; label: string }[] = [
+  { value: "admin", label: "Admin" },
+  { value: "staff", label: "Staff" },
+  { value: "dentist", label: "Dentist" },
+];
 
 interface UserProfileEditorProps {
   userId: string;
   currentDisplayName: string | null;
   currentPhone: string | null;
+  currentRoles: AppRole[];
   userEmail: string;
 }
 
 interface ProfileFormData {
   displayName: string;
   phone: string;
+  roles: AppRole[];
 }
 
 export const UserProfileEditor = ({
   userId,
   currentDisplayName,
   currentPhone,
+  currentRoles,
   userEmail,
 }: UserProfileEditorProps) => {
   const { toast } = useToast();
@@ -39,11 +52,24 @@ export const UserProfileEditor = ({
   const [formData, setFormData] = useState<ProfileFormData>({
     displayName: currentDisplayName || "",
     phone: currentPhone || "",
+    roles: currentRoles || [],
   });
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        displayName: currentDisplayName || "",
+        phone: currentPhone || "",
+        roles: currentRoles || [],
+      });
+    }
+  }, [open, currentDisplayName, currentPhone, currentRoles]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      const { error } = await supabase
+      // Update profile
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({ 
           display_name: data.displayName.trim() || null,
@@ -51,13 +77,45 @@ export const UserProfileEditor = ({
         })
         .eq("user_id", userId);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      // Get current roles to determine what to add/remove
+      const { data: existingRoles, error: rolesQueryError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+
+      if (rolesQueryError) throw rolesQueryError;
+
+      const existingRoleValues = existingRoles?.map(r => r.role) || [];
+      const rolesToAdd = data.roles.filter(r => !existingRoleValues.includes(r));
+      const rolesToRemove = existingRoleValues.filter(r => !data.roles.includes(r));
+
+      // Remove roles
+      if (rolesToRemove.length > 0) {
+        const { error: removeError } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", userId)
+          .in("role", rolesToRemove);
+
+        if (removeError) throw removeError;
+      }
+
+      // Add new roles
+      if (rolesToAdd.length > 0) {
+        const { error: addError } = await supabase
+          .from("user_roles")
+          .insert(rolesToAdd.map(role => ({ user_id: userId, role })));
+
+        if (addError) throw addError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["usersWithRoles"] });
       toast({
         title: "Profile updated",
-        description: "Profile has been updated successfully.",
+        description: "Profile and roles have been updated successfully.",
       });
       setOpen(false);
     },
@@ -72,7 +130,24 @@ export const UserProfileEditor = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.roles.length === 0) {
+      toast({
+        title: "Error",
+        description: "User must have at least one role.",
+        variant: "destructive",
+      });
+      return;
+    }
     updateProfileMutation.mutate(formData);
+  };
+
+  const handleRoleToggle = (role: AppRole, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      roles: checked 
+        ? [...prev.roles, role]
+        : prev.roles.filter(r => r !== role)
+    }));
   };
 
   return (
@@ -86,7 +161,7 @@ export const UserProfileEditor = ({
         <DialogHeader>
           <DialogTitle>Edit User Profile</DialogTitle>
           <DialogDescription>
-            Update profile information for {userEmail}
+            Update profile information and roles for {userEmail}
           </DialogDescription>
         </DialogHeader>
 
@@ -126,6 +201,30 @@ export const UserProfileEditor = ({
               onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               placeholder="Enter phone number"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Roles</Label>
+            <div className="space-y-2">
+              {AVAILABLE_ROLES.map((role) => (
+                <div key={role.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`role-${role.value}`}
+                    checked={formData.roles.includes(role.value)}
+                    onCheckedChange={(checked) => handleRoleToggle(role.value, checked as boolean)}
+                  />
+                  <label
+                    htmlFor={`role-${role.value}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    {role.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              User must have at least one role
+            </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

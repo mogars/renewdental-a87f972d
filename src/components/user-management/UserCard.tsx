@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
 import { Phone, Users } from "lucide-react";
-import { UserRoleEditor } from "./UserRoleEditor";
 import { UserProfileEditor } from "./UserProfileEditor";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -59,12 +58,8 @@ export const UserCard = ({ user }: UserCardProps) => {
           userId={user.id}
           currentDisplayName={user.displayName}
           currentPhone={user.phone}
-          userEmail={user.email}
-        />
-        <UserRoleEditor
-          userId={user.id}
-          userEmail={user.displayName || user.email}
           currentRoles={user.roles}
+          userEmail={user.email}
         />
       </div>
     </div>
