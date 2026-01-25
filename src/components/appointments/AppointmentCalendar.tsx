@@ -26,7 +26,7 @@ type AppointmentWithPatient = Tables<"appointments"> & {
 interface AppointmentCalendarProps {
   appointments: AppointmentWithPatient[];
   isLoading: boolean;
-  onAddAppointment: (date?: Date) => void;
+  onAddAppointment: (date?: Date, startTime?: string) => void;
   onEditAppointment: (appointmentId: string) => void;
 }
 
