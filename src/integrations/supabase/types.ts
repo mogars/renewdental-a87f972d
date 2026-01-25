@@ -19,6 +19,7 @@ export type Database = {
           appointment_date: string
           created_at: string
           dentist_name: string | null
+          doctor_id: string | null
           end_time: string
           google_event_id: string | null
           id: string
@@ -34,6 +35,7 @@ export type Database = {
           appointment_date: string
           created_at?: string
           dentist_name?: string | null
+          doctor_id?: string | null
           end_time: string
           google_event_id?: string | null
           id?: string
@@ -49,6 +51,7 @@ export type Database = {
           appointment_date?: string
           created_at?: string
           dentist_name?: string | null
+          doctor_id?: string | null
           end_time?: string
           google_event_id?: string | null
           id?: string
@@ -61,6 +64,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_patient_id_fkey"
             columns: ["patient_id"]
@@ -119,6 +129,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      doctors: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          is_active: boolean
+          last_name: string
+          phone: string | null
+          specialty: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean
+          last_name: string
+          phone?: string | null
+          specialty?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          phone?: string | null
+          specialty?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       patients: {
         Row: {
