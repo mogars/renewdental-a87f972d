@@ -14,6 +14,7 @@ interface UserWithRoles {
   id: string;
   email: string;
   displayName: string | null;
+  phone: string | null;
   roles: AppRole[];
 }
 
@@ -36,18 +37,18 @@ export const UsersTab = () => {
 
       if (rolesError) throw rolesError;
 
-      // Fetch profiles for email addresses and display names
+      // Fetch profiles for email addresses, display names, and phone
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
-        .select("user_id, email, display_name");
+        .select("user_id, email, display_name, phone");
 
       if (profilesError) throw profilesError;
 
       // Create profile lookup map
-      const profileByUser = profilesData.reduce((acc, { user_id, email, display_name }) => {
-        acc[user_id] = { email, displayName: display_name };
+      const profileByUser = profilesData.reduce((acc, { user_id, email, display_name, phone }) => {
+        acc[user_id] = { email, displayName: display_name, phone };
         return acc;
-      }, {} as Record<string, { email: string; displayName: string | null }>);
+      }, {} as Record<string, { email: string; displayName: string | null; phone: string | null }>);
 
       // Group roles by user
       const rolesByUser = rolesData.reduce((acc, { user_id, role }) => {
@@ -62,6 +63,7 @@ export const UsersTab = () => {
         id: userId,
         email: profileByUser[userId]?.email || `User ${userId.slice(0, 8)}...`,
         displayName: profileByUser[userId]?.displayName || null,
+        phone: profileByUser[userId]?.phone || null,
         roles: rolesByUser[userId] || [],
       }));
 
