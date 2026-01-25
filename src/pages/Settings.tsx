@@ -9,9 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
-import { Plus, Pencil, Trash2, Loader2, Stethoscope, Users } from "lucide-react";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { Plus, Pencil, Trash2, Loader2, Stethoscope, Users, Settings2, Bell } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { UsersTab } from "@/components/user-management/UsersTab";
 
@@ -21,6 +23,7 @@ const Settings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRole();
+  const { settings, updateSettings } = useAppSettings();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
   const [formData, setFormData] = useState({
@@ -170,10 +173,16 @@ const Settings = () => {
               Doctors
             </TabsTrigger>
             {isAdmin && (
-              <TabsTrigger value="users" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Users
-              </TabsTrigger>
+              <>
+                <TabsTrigger value="users" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Users
+                </TabsTrigger>
+                <TabsTrigger value="general" className="flex items-center gap-2">
+                  <Settings2 className="h-4 w-4" />
+                  General
+                </TabsTrigger>
+              </>
             )}
           </TabsList>
 
@@ -323,9 +332,67 @@ const Settings = () => {
           </TabsContent>
 
           {isAdmin && (
-            <TabsContent value="users">
-              <UsersTab />
-            </TabsContent>
+            <>
+              <TabsContent value="users">
+                <UsersTab />
+              </TabsContent>
+
+              <TabsContent value="general">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Bell className="h-5 w-5" />
+                      Notification Settings
+                    </CardTitle>
+                    <CardDescription>
+                      Configure how notifications appear in the application
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="toast-duration" className="text-base">
+                            Notification Duration
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            How long notifications stay visible ({(settings.toastDuration / 1000).toFixed(1)} seconds)
+                          </p>
+                        </div>
+                        <span className="text-sm font-medium text-muted-foreground">
+                          {(settings.toastDuration / 1000).toFixed(1)}s
+                        </span>
+                      </div>
+                      <Slider
+                        id="toast-duration"
+                        value={[settings.toastDuration]}
+                        onValueChange={(value) => updateSettings({ toastDuration: value[0] })}
+                        min={1000}
+                        max={15000}
+                        step={500}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>1 second</span>
+                        <span>15 seconds</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        toast({
+                          title: "Test Notification",
+                          description: "This notification will disappear after the configured duration.",
+                        });
+                      }}
+                    >
+                      Test Notification
+                    </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </>
           )}
         </Tabs>
       </main>

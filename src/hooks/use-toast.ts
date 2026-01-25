@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
+import { getAppSettings } from "@/hooks/useAppSettings";
 
 const TOAST_LIMIT = 1;
 const TOAST_REMOVE_DELAY = 1000000;
@@ -136,6 +137,7 @@ type Toast = Omit<ToasterToast, "id">;
 
 function toast({ ...props }: Toast) {
   const id = genId();
+  const { toastDuration } = getAppSettings();
 
   const update = (props: ToasterToast) =>
     dispatch({
@@ -155,6 +157,11 @@ function toast({ ...props }: Toast) {
       },
     },
   });
+
+  // Auto-dismiss after configured duration
+  setTimeout(() => {
+    dismiss();
+  }, toastDuration);
 
   return {
     id: id,
