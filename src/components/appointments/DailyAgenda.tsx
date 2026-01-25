@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Clock, User, Phone, Mail, FileText } from "lucide-react";
+import { Plus, Clock, User, Phone, Mail, FileText, MessageSquare, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tables } from "@/integrations/supabase/types";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 type AppointmentWithPatient = Tables<"appointments"> & {
   patients: {
@@ -29,9 +32,65 @@ export const DailyAgenda = ({
   onAddAppointment,
   onEditAppointment,
 }: DailyAgendaProps) => {
+  const { toast } = useToast();
+  const [sendingSmsFor, setSendingSmsFor] = useState<string | null>(null);
+
   const sortedAppointments = [...appointments].sort((a, b) =>
     a.start_time.localeCompare(b.start_time)
   );
+
+  const sendImmediateSms = async (e: React.MouseEvent, appointmentId: string) => {
+    e.stopPropagation();
+    setSendingSmsFor(appointmentId);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast({
+          title: "Not authenticated",
+          description: "Please log in to send SMS reminders.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-immediate-sms`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+          body: JSON.stringify({ appointmentId }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "SMS Sent",
+          description: result.message,
+        });
+      } else {
+        toast({
+          title: "Failed to send SMS",
+          description: result.error || "Unknown error",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("SMS send error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send SMS. Check console for details.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingSmsFor(null);
+    }
+  };
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
@@ -135,6 +194,22 @@ export const DailyAgenda = ({
                       {getStatusBadge(apt.status)}
                       {apt.treatment_type && (
                         <Badge variant="outline">{apt.treatment_type}</Badge>
+                      )}
+                      {apt.patients?.phone && apt.status === "scheduled" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1 text-xs"
+                          onClick={(e) => sendImmediateSms(e, apt.id)}
+                          disabled={sendingSmsFor === apt.id}
+                        >
+                          {sendingSmsFor === apt.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <MessageSquare className="h-3 w-3" />
+                          )}
+                          Send SMS
+                        </Button>
                       )}
                     </div>
                   </div>
