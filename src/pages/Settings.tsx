@@ -13,7 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { Plus, Pencil, Trash2, Loader2, Stethoscope, Users, Settings2, Bell } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Stethoscope, Users, Settings2, Bell, MessageSquare } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { UsersTab } from "@/components/user-management/UsersTab";
 
@@ -33,6 +33,7 @@ const Settings = () => {
     phone: "",
     email: "",
   });
+  const [isSmsTestLoading, setIsSmsTestLoading] = useState(false);
 
   const { data: doctors, isLoading } = useQuery({
     queryKey: ["doctors"],
@@ -155,6 +156,57 @@ const Settings = () => {
   };
 
   const isSubmitting = createDoctor.isPending || updateDoctor.isPending;
+
+  const testSmsReminders = async () => {
+    setIsSmsTestLoading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast({
+          title: "Not authenticated",
+          description: "Please log in to test SMS reminders.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms-reminder`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "SMS Test Complete",
+          description: `Processed ${result.message}. ${result.reminders_sent || 0} reminders sent.`,
+        });
+        console.log("SMS Test Results:", result);
+      } else {
+        toast({
+          title: "SMS Test Failed",
+          description: result.error || "Unknown error occurred",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("SMS test error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to test SMS reminders. Check console for details.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSmsTestLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -388,6 +440,40 @@ const Settings = () => {
                       }}
                     >
                       Test Notification
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" />
+                      SMS Reminders
+                    </CardTitle>
+                    <CardDescription>
+                      Test the automatic SMS reminder system for appointments
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      This will check for appointments scheduled in the next 24 hours and send SMS reminders 
+                      to patients with phone numbers. Reminders are sent 24 hours and 1 hour before appointments.
+                    </p>
+                    <Button
+                      onClick={testSmsReminders}
+                      disabled={isSmsTestLoading}
+                    >
+                      {isSmsTestLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Testing...
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          Test SMS Reminders
+                        </>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>
