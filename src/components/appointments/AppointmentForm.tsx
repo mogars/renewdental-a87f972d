@@ -67,7 +67,6 @@ export const AppointmentForm = ({
 
   const [formData, setFormData] = useState({
     patientId: "",
-    title: "",
     date: selectedDate,
     startTime: "09:00",
     endTime: "10:00",
@@ -95,7 +94,6 @@ export const AppointmentForm = ({
     if (editingAppointment) {
       setFormData({
         patientId: editingAppointment.patient_id,
-        title: editingAppointment.title,
         date: new Date(editingAppointment.appointment_date),
         startTime: editingAppointment.start_time.slice(0, 5),
         endTime: editingAppointment.end_time.slice(0, 5),
@@ -108,7 +106,6 @@ export const AppointmentForm = ({
       setFormData((prev) => ({
         ...prev,
         patientId: "",
-        title: "",
         date: selectedDate,
         startTime: "09:00",
         endTime: "10:00",
@@ -125,11 +122,11 @@ export const AppointmentForm = ({
       const selectedDoctor = doctors?.find((d) => d.id === formData.doctorId);
       const { error } = await supabase.from("appointments").insert({
         patient_id: formData.patientId,
-        title: formData.title,
+        title: formData.treatmentType,
         appointment_date: format(formData.date, "yyyy-MM-dd"),
         start_time: formData.startTime,
         end_time: formData.endTime,
-        treatment_type: formData.treatmentType || null,
+        treatment_type: formData.treatmentType,
         doctor_id: formData.doctorId || null,
         dentist_name: selectedDoctor ? `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}` : null,
         notes: formData.notes || null,
@@ -165,11 +162,11 @@ export const AppointmentForm = ({
         .from("appointments")
         .update({
           patient_id: formData.patientId,
-          title: formData.title,
+          title: formData.treatmentType,
           appointment_date: format(formData.date, "yyyy-MM-dd"),
           start_time: formData.startTime,
           end_time: formData.endTime,
-          treatment_type: formData.treatmentType || null,
+          treatment_type: formData.treatmentType,
           doctor_id: formData.doctorId || null,
           dentist_name: selectedDoctor ? `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}` : null,
           notes: formData.notes || null,
@@ -257,14 +254,23 @@ export const AppointmentForm = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-              placeholder="e.g., Dental Cleaning"
+            <Label>Treatment Type *</Label>
+            <Select
+              value={formData.treatmentType}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, treatmentType: value }))}
               required
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select treatment type" />
+              </SelectTrigger>
+              <SelectContent>
+                {TREATMENT_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -315,25 +321,6 @@ export const AppointmentForm = ({
                 required
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Treatment Type</Label>
-            <Select
-              value={formData.treatmentType}
-              onValueChange={(value) => setFormData((prev) => ({ ...prev, treatmentType: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select treatment type" />
-              </SelectTrigger>
-              <SelectContent>
-                {TREATMENT_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
@@ -416,7 +403,7 @@ export const AppointmentForm = ({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !formData.patientId || !formData.title || !formData.doctorId}>
+            <Button type="submit" disabled={isLoading || !formData.patientId || !formData.treatmentType || !formData.doctorId}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingAppointmentId ? "Update" : "Create"}
             </Button>
