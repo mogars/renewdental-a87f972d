@@ -4,13 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Users } from "lucide-react";
 import { UserCard } from "./UserCard";
-import { AddUserRoleForm } from "./AddUserRoleForm";
 import { CreateUserForm } from "./CreateUserForm";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
-interface UserWithRoles {
+export interface UserWithRoles {
   id: string;
   email: string;
   displayName: string | null;
@@ -101,7 +100,7 @@ export const UsersTab = () => {
               Registered Users
             </CardTitle>
             <CardDescription>
-              Click the edit button to manage user roles
+              Click the edit button to manage user profile and roles
             </CardDescription>
           </div>
           <CreateUserForm onSuccess={() => queryClient.invalidateQueries({ queryKey: ["usersWithRoles"] })} />
@@ -129,19 +128,6 @@ export const UsersTab = () => {
               </p>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Add User Role Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Add Role to Existing User</CardTitle>
-          <CardDescription>
-            Enter a user ID to assign roles to a user who doesn't appear in the list above
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AddUserRoleForm onSuccess={() => queryClient.invalidateQueries({ queryKey: ["usersWithRoles"] })} />
         </CardContent>
       </Card>
     </div>
