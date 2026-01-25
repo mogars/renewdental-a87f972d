@@ -181,8 +181,8 @@ export const WeeklyView = ({
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        "absolute right-1 top-1 z-10 h-5 w-5 transition-opacity",
-                        totalAppointments > 0 ? "opacity-70 hover:opacity-100" : "opacity-0 group-hover:opacity-100"
+                        "absolute right-1 top-1 z-30 h-5 w-5 transition-opacity bg-background/80 hover:bg-background shadow-sm",
+                        totalAppointments > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                       )}
                       onClick={(e) => {
                         e.stopPropagation();
