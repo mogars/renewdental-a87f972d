@@ -36,16 +36,12 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Create user client with the auth header to get current user
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    // Get the current user
-    const { data: { user: currentUser }, error: userError } = await userClient.auth.getUser();
+    // Verify the JWT token by getting user with the token
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user: currentUser }, error: userError } = await adminClient.auth.getUser(token);
     
     if (userError || !currentUser) {
-      console.error("User verification failed:", userError);
+      console.error("Token verification failed:", userError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
