@@ -73,7 +73,7 @@ const Header = () => {
             </svg>
           </div>
           <span className="font-display text-xl font-semibold text-foreground">
-            DentaCare
+            Renew Dental
           </span>
         </Link>
 
