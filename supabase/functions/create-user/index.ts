@@ -20,33 +20,40 @@ serve(async (req) => {
   try {
     // Verify the request has a valid JWT
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Missing authorization header" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Create client with user's token to verify they're authenticated
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+    // Create admin client with service role key
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    // Create user client with the auth header to get current user
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
     // Get the current user
     const { data: { user: currentUser }, error: userError } = await userClient.auth.getUser();
+    
     if (userError || !currentUser) {
+      console.error("User verification failed:", userError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check if the current user is an admin
-    const { data: adminCheck } = await userClient
+    // Check if the current user is an admin using service role client
+    const { data: adminCheck } = await adminClient
       .from("user_roles")
       .select("role")
       .eq("user_id", currentUser.id)
@@ -77,12 +84,7 @@ serve(async (req) => {
       });
     }
 
-    // Create admin client with service role key
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    // Create the user
+    // Create the user using admin client
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -90,6 +92,7 @@ serve(async (req) => {
     });
 
     if (createError) {
+      console.error("User creation failed:", createError);
       return new Response(JSON.stringify({ error: createError.message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
