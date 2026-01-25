@@ -36,12 +36,9 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Create a client with the user's token to get user info
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user: currentUser }, error: userError } = await userClient.auth.getUser();
+    // Verify the JWT token using admin client
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user: currentUser }, error: userError } = await adminClient.auth.getUser(token);
     
     if (userError || !currentUser) {
       console.error("Token verification failed:", userError);
