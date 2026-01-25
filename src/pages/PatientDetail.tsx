@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import PatientForm, { PatientFormData } from "@/components/PatientForm";
 import ChartRecordForm, { ChartRecordFormData } from "@/components/ChartRecordForm";
-import ChartRecordCard from "@/components/ChartRecordCard";
+import ChartRecordsTable from "@/components/ChartRecordsTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +29,6 @@ import {
   MapPin,
   Calendar,
   Shield,
-  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -260,136 +259,115 @@ const PatientDetail = () => {
           Back to Patients
         </Button>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Patient Info Card */}
-          <div className="lg:col-span-1">
-            <Card className="gradient-card border-border/50 shadow-card">
-              <CardHeader className="flex flex-row items-start justify-between space-y-0">
+        <div className="flex gap-6 h-[calc(100vh-180px)]">
+          {/* Left Panel - Patient Info */}
+          <div className="w-80 shrink-0">
+            <Card className="gradient-card border-border/50 shadow-card h-full overflow-auto">
+              <CardHeader className="pb-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-secondary-foreground font-semibold text-xl">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground font-semibold text-lg">
                     {patient.first_name.charAt(0)}
                     {patient.last_name.charAt(0)}
                   </div>
                   <div>
-                    <CardTitle className="font-display text-xl">
+                    <CardTitle className="font-display text-lg">
                       {patient.first_name} {patient.last_name}
                     </CardTitle>
                     {patient.insurance_provider && (
-                      <Badge variant="secondary" className="mt-1">
+                      <Badge variant="secondary" className="mt-1 text-xs">
                         {patient.insurance_provider}
                       </Badge>
                     )}
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 text-sm">
                 {patient.email && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{patient.email}</span>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">{patient.email}</span>
                   </div>
                 )}
                 {patient.phone && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span>{patient.phone}</span>
                   </div>
                 )}
                 {patient.date_of_birth && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span>{format(new Date(patient.date_of_birth), "MMMM d, yyyy")}</span>
                   </div>
                 )}
                 {patient.address && (
-                  <div className="flex items-start gap-3 text-sm">
+                  <div className="flex items-start gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <span>{patient.address}</span>
                   </div>
                 )}
                 {patient.insurance_id && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span>ID: {patient.insurance_id}</span>
                   </div>
                 )}
                 {patient.notes && (
-                  <div className="pt-4 border-t border-border">
-                    <p className="text-sm text-muted-foreground">{patient.notes}</p>
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-muted-foreground">{patient.notes}</p>
                   </div>
                 )}
 
                 <div className="flex gap-2 pt-4">
                   <Button
                     variant="outline"
+                    size="sm"
                     className="flex-1"
                     onClick={() => setIsEditPatientOpen(true)}
                   >
-                    <Pencil className="mr-2 h-4 w-4" />
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
                     Edit
                   </Button>
                   <Button
                     variant="outline"
+                    size="sm"
                     className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
                     onClick={() => setIsDeletePatientOpen(true)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Chart Records */}
-          <div className="lg:col-span-2">
+          {/* Right Panel - Chart Records Table */}
+          <div className="flex-1 flex flex-col min-w-0">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-xl font-semibold text-foreground">
                 Chart Records
               </h2>
-              <Button onClick={() => setIsAddRecordOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+              <Button onClick={() => setIsAddRecordOpen(true)} size="sm">
+                <Plus className="mr-1.5 h-4 w-4" />
                 Add Record
               </Button>
             </div>
 
-            {isLoadingRecords ? (
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-32 animate-pulse rounded-lg bg-muted" />
-                ))}
-              </div>
-            ) : chartRecords && chartRecords.length > 0 ? (
-              <div className="space-y-4">
-                {chartRecords.map((record) => (
-                  <ChartRecordCard
-                    key={record.id}
-                    id={record.id}
-                    recordDate={record.record_date}
-                    treatmentType={record.treatment_type}
-                    toothNumber={record.tooth_number}
-                    description={record.description}
-                    dentistName={record.dentist_name}
-                    cost={record.cost ? parseFloat(record.cost.toString()) : null}
-                    status={record.status}
-                    onEdit={handleEditRecord}
-                    onDelete={handleDeleteRecord}
-                  />
-                ))}
-              </div>
-            ) : (
-              <Card className="gradient-card border-border/50">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                    <FileText className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <p className="mb-4 text-muted-foreground">No chart records yet</p>
-                  <Button onClick={() => setIsAddRecordOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add First Record
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+            <div className="flex-1 overflow-auto">
+              {isLoadingRecords ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-12 animate-pulse rounded bg-muted" />
+                  ))}
+                </div>
+              ) : (
+                <ChartRecordsTable
+                  records={chartRecords || []}
+                  onEdit={handleEditRecord}
+                  onDelete={handleDeleteRecord}
+                />
+              )}
+            </div>
           </div>
         </div>
       </main>
