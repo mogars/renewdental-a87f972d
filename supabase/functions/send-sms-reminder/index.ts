@@ -69,14 +69,59 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Check for authorization header - required for manual invocations
+    const authHeader = req.headers.get("Authorization");
+    
+    // If no auth header, check if this is a cron job (internal call)
+    // Cron jobs from pg_cron include a specific header or come from localhost
+    const isCronJob = req.headers.get("x-cron-job") === "true" || 
+                      req.headers.get("host")?.includes("localhost");
+    
+    if (!authHeader && !isCronJob) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization header" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    // For manual invocations, verify the JWT token
+    if (authHeader && !isCronJob) {
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const token = authHeader.replace("Bearer ", "");
+      
+      const { data, error: authError } = await supabase.auth.getUser(token);
+      
+      if (authError || !data.user) {
+        return new Response(
+          JSON.stringify({ error: "Invalid or expired token" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+        );
+      }
+
+      // Verify user has admin or staff role
+      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+      const { data: roleData } = await serviceClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+
+      if (!roleData || !["admin", "staff", "dentist"].includes(roleData.role)) {
+        return new Response(
+          JSON.stringify({ error: "Insufficient permissions" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+        );
+      }
+    }
+
+    // Use service role for actual data operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const now = new Date();
     const today = now.toISOString().split("T")[0];
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-    
-    const currentHour = now.getUTCHours();
-    const currentMinute = now.getUTCMinutes();
 
     // Fetch appointments for today and tomorrow that are scheduled
     const { data: appointments, error } = await supabase
