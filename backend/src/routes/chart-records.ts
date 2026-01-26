@@ -4,6 +4,29 @@ import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
+// Get chart records (supports ?patient_id=...)
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { patient_id } = req.query;
+
+    let sql = 'SELECT * FROM chart_records';
+    let params: any[] = [];
+
+    if (patient_id) {
+      sql += ' WHERE patient_id = ?';
+      params.push(patient_id);
+    }
+
+    sql += ' ORDER BY record_date DESC';
+
+    const records = await query(sql, params);
+    res.json(records);
+  } catch (error) {
+    console.error('Error fetching chart records:', error);
+    res.status(500).json({ error: 'Failed to fetch chart records' });
+  }
+});
+
 // Get chart records for a patient
 router.get('/patient/:patientId', async (req: Request, res: Response) => {
   try {
@@ -62,7 +85,7 @@ router.post('/', async (req: Request, res: Response) => {
         dentist_name, cost, status, record_date, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, patient_id, treatment_type, tooth_number, description,
-       dentist_name, cost, status, record_date || now.slice(0, 10), now, now]
+        dentist_name, cost, status, record_date || now.slice(0, 10), now, now]
     );
 
     res.status(201).json(record);
@@ -94,7 +117,7 @@ router.put('/:id', async (req: Request, res: Response) => {
        dentist_name = ?, cost = ?, status = ?, record_date = ?, updated_at = ?
        WHERE id = ?`,
       [treatment_type, tooth_number, description, dentist_name,
-       cost, status, record_date, now, req.params.id],
+        cost, status, record_date, now, req.params.id],
       8 // id is at index 8
     );
 
@@ -114,7 +137,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const existing = await queryOne('SELECT id FROM chart_records WHERE id = ?', [req.params.id]);
-    
+
     if (!existing) {
       res.status(404).json({ error: 'Chart record not found' });
       return;
