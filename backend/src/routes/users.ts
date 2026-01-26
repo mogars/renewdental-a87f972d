@@ -46,16 +46,26 @@ router.post('/', async (req: Request, res: Response) => {
 router.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+    console.log(`[AUTH] Login attempt for email: ${email}`);
 
     const profile = await queryOne(
       'SELECT p.*, ur.role FROM profiles p JOIN user_roles ur ON p.user_id = ur.user_id WHERE p.email = ?',
       [email]
     );
 
-    if (!profile || profile.password !== password) {
+    if (!profile) {
+      console.warn(`[AUTH] Login failed: No user found with email ${email}`);
       res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
+
+    if (profile.password !== password) {
+      console.warn(`[AUTH] Login failed: Password mismatch for user ${email}`);
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
+    }
+
+    console.log(`[AUTH] Login successful for user: ${email} (${profile.role})`);
 
     // In a real app, generate and return a JWT here
     res.json({
@@ -65,9 +75,12 @@ router.post('/login', async (req: Request, res: Response) => {
       role: profile.role,
       token: 'mock-jwt-token'
     });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+  } catch (error: any) {
+    console.error('[AUTH] Login error:', error);
+    const message = error?.message?.includes('Unknown column \'password\'')
+      ? 'Database migration missing: column "password" does not exist'
+      : 'Login failed';
+    res.status(500).json({ error: message });
   }
 });
 
