@@ -19,31 +19,45 @@ interface Appointment {
   } | null;
 }
 
+interface ReminderConfig {
+  enabled24h: boolean;
+  enabled2h: boolean;
+  enabled1h: boolean;
+  daysBefore: number;
+  template24h: string;
+  template2h: string;
+  template1h: string;
+}
+
+const defaultConfig: ReminderConfig = {
+  enabled24h: true,
+  enabled2h: true,
+  enabled1h: true,
+  daysBefore: 1,
+  template24h: "Hi {patient_name}! This is a reminder for your dental appointment on {appointment_date} at {appointment_time}.",
+  template2h: "Hi {patient_name}! Reminder: your dental appointment is in 2 hours at {appointment_time}.",
+  template1h: "Hi {patient_name}! Your dental appointment is in 1 hour at {appointment_time}.",
+};
+
 function normalizePhoneNumber(phone: string): string {
-  // Remove any spaces, dashes, or parentheses
   let cleaned = phone.replace(/[\s\-\(\)]/g, "");
   
-  // If already in E.164 format, return as-is
   if (cleaned.startsWith("+")) {
     return cleaned;
   }
   
-  // Romanian numbers: convert 07xx to +407xx
   if (cleaned.startsWith("07") && cleaned.length === 10) {
     return `+4${cleaned}`;
   }
   
-  // Romanian numbers: convert 007xx to +407xx
   if (cleaned.startsWith("007") && cleaned.length === 11) {
     return `+4${cleaned.slice(2)}`;
   }
   
-  // If starts with country code without +, add +
   if (cleaned.startsWith("40") && cleaned.length === 11) {
     return `+${cleaned}`;
   }
   
-  // Default: assume it needs Romanian country code
   return `+40${cleaned}`;
 }
 
@@ -52,11 +66,13 @@ async function sendTextBeeSMS(to: string, body: string): Promise<boolean> {
   const deviceId = Deno.env.get("TEXTBEE_DEVICE_ID");
 
   if (!apiKey || !deviceId) {
-    console.error("TextBee credentials not configured");
+    console.error("TextBee credentials not configured - TEXTBEE_API_KEY:", !!apiKey, "TEXTBEE_DEVICE_ID:", !!deviceId);
     return false;
   }
 
   try {
+    console.log(`Sending SMS to ${to}: ${body.substring(0, 50)}...`);
+    
     const response = await fetch(
       `https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/send-sms`,
       {
@@ -87,6 +103,13 @@ async function sendTextBeeSMS(to: string, body: string): Promise<boolean> {
   }
 }
 
+function formatMessage(template: string, patientName: string, appointmentDate: string, appointmentTime: string): string {
+  return template
+    .replace(/{patient_name}/g, patientName)
+    .replace(/{appointment_date}/g, appointmentDate)
+    .replace(/{appointment_time}/g, appointmentTime);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -100,16 +123,25 @@ serve(async (req) => {
     // Check for authorization header - required for manual invocations
     const authHeader = req.headers.get("Authorization");
     
-    // If no auth header, check if this is a cron job (internal call)
-    // Cron jobs from pg_cron include a specific header or come from localhost
-    const isCronJob = req.headers.get("x-cron-job") === "true" || 
-                      req.headers.get("host")?.includes("localhost");
+    // Allow cron jobs (internal calls) without auth
+    const isCronJob = req.headers.get("x-cron-job") === "true";
     
     if (!authHeader && !isCronJob) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
-      );
+      // For pg_net calls, check if body has a cron indicator
+      try {
+        const body = await req.clone().json();
+        if (!body?.cron) {
+          return new Response(
+            JSON.stringify({ error: "Missing authorization header" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+          );
+        }
+      } catch {
+        return new Response(
+          JSON.stringify({ error: "Missing authorization header" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+        );
+      }
     }
 
     // For manual invocations, verify the JWT token
@@ -126,7 +158,6 @@ serve(async (req) => {
         );
       }
 
-      // Verify user has admin or staff role
       const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
       const { data: roleData } = await serviceClient
         .from("user_roles")
@@ -149,9 +180,29 @@ serve(async (req) => {
     // Use service role for actual data operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Fetch reminder configuration
+    const { data: configData } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "sms_reminder_config")
+      .maybeSingle();
+
+    let config: ReminderConfig = defaultConfig;
+    if (configData?.value) {
+      try {
+        config = { ...defaultConfig, ...JSON.parse(configData.value) };
+      } catch {
+        console.log("Failed to parse config, using defaults");
+      }
+    }
+
+    console.log("Using reminder config:", JSON.stringify(config));
+
     const now = new Date();
     const today = now.toISOString().split("T")[0];
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+    console.log(`Checking appointments for ${today} and ${tomorrow}, current time: ${now.toISOString()}`);
 
     // Fetch appointments for today and tomorrow that are scheduled
     const { data: appointments, error } = await supabase
@@ -176,17 +227,9 @@ serve(async (req) => {
       throw error;
     }
 
-    // Fetch the SMS template from app_settings
-    const { data: templateSetting } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "sms_template")
-      .maybeSingle();
+    console.log(`Found ${appointments?.length || 0} scheduled appointments`);
 
-    const defaultTemplate = "Hi {patient_name}! This is a reminder for your dental appointment on {appointment_date} at {appointment_time}. Please reply CONFIRM to confirm or call us to reschedule. - DentaCare";
-    const template = templateSetting?.value || defaultTemplate;
-
-    const results: { success: boolean; appointmentId: string; type: string }[] = [];
+    const results: { success: boolean; appointmentId: string; type: string; phone?: string; error?: string }[] = [];
 
     for (const apt of (appointments || []) as unknown as Appointment[]) {
       if (!apt.patients?.phone) {
@@ -194,50 +237,51 @@ serve(async (req) => {
         continue;
       }
 
+      // Parse appointment datetime in local timezone
       const [aptHour, aptMinute] = apt.start_time.split(":").map(Number);
-      const aptDate = new Date(apt.appointment_date);
-      aptDate.setUTCHours(aptHour, aptMinute, 0, 0);
-
+      const aptDate = new Date(apt.appointment_date + "T" + apt.start_time);
+      
       const timeDiffMs = aptDate.getTime() - now.getTime();
       const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
 
+      console.log(`Appointment ${apt.id}: ${apt.appointment_date} ${apt.start_time}, diff: ${timeDiffHours.toFixed(2)}h`);
+
       const patientName = apt.patients.first_name;
       const appointmentTime = apt.start_time.slice(0, 5);
-      const appointmentDateStr = new Date(apt.appointment_date).toLocaleDateString("en-US", {
+      const appointmentDateStr = new Date(apt.appointment_date).toLocaleDateString("ro-RO", {
         weekday: "long",
         month: "long",
         day: "numeric",
       });
 
-      // Build the message from template
-      const message = template
-        .replace(/{patient_name}/g, patientName)
-        .replace(/{appointment_date}/g, appointmentDateStr)
-        .replace(/{appointment_time}/g, appointmentTime);
-
-      // Normalize phone number to E.164 format
       const normalizedPhone = normalizePhoneNumber(apt.patients.phone);
 
       // Send 24-hour reminder (between 23 and 25 hours before)
-      if (timeDiffHours >= 23 && timeDiffHours <= 25) {
+      if (config.enabled24h && timeDiffHours >= 23 && timeDiffHours <= 25) {
+        const message = formatMessage(config.template24h, patientName, appointmentDateStr, appointmentTime);
+        console.log(`Sending 24h reminder for appointment ${apt.id}`);
         const success = await sendTextBeeSMS(normalizedPhone, message);
-        results.push({ success, appointmentId: apt.id, type: "24h" });
+        results.push({ success, appointmentId: apt.id, type: "24h", phone: normalizedPhone });
       }
 
       // Send 2-hour reminder (between 115 and 125 minutes before)
-      if (timeDiffHours >= 1.917 && timeDiffHours <= 2.083) {
-        const twoHourMessage = `Hi ${patientName}! Reminder: your dental appointment is in 2 hours at ${appointmentTime}. See you soon! - DentaCare`;
-        const success = await sendTextBeeSMS(normalizedPhone, twoHourMessage);
-        results.push({ success, appointmentId: apt.id, type: "2h" });
+      if (config.enabled2h && timeDiffHours >= 1.917 && timeDiffHours <= 2.083) {
+        const message = formatMessage(config.template2h, patientName, appointmentDateStr, appointmentTime);
+        console.log(`Sending 2h reminder for appointment ${apt.id}`);
+        const success = await sendTextBeeSMS(normalizedPhone, message);
+        results.push({ success, appointmentId: apt.id, type: "2h", phone: normalizedPhone });
       }
 
       // Send 1-hour reminder (between 55 and 65 minutes before)
-      if (timeDiffHours >= 0.917 && timeDiffHours <= 1.083) {
-        const hourMessage = `Hi ${patientName}! Just a reminder that your dental appointment is in 1 hour at ${appointmentTime}. We look forward to seeing you! - DentaCare`;
-        const success = await sendTextBeeSMS(normalizedPhone, hourMessage);
-        results.push({ success, appointmentId: apt.id, type: "1h" });
+      if (config.enabled1h && timeDiffHours >= 0.917 && timeDiffHours <= 1.083) {
+        const message = formatMessage(config.template1h, patientName, appointmentDateStr, appointmentTime);
+        console.log(`Sending 1h reminder for appointment ${apt.id}`);
+        const success = await sendTextBeeSMS(normalizedPhone, message);
+        results.push({ success, appointmentId: apt.id, type: "1h", phone: normalizedPhone });
       }
     }
+
+    console.log(`Processed ${appointments?.length || 0} appointments, sent ${results.filter(r => r.success).length} reminders`);
 
     return new Response(
       JSON.stringify({
@@ -245,6 +289,11 @@ serve(async (req) => {
         message: `Processed ${appointments?.length || 0} appointments`,
         reminders_sent: results.filter((r) => r.success).length,
         details: results,
+        config_used: {
+          enabled24h: config.enabled24h,
+          enabled2h: config.enabled2h,
+          enabled1h: config.enabled1h,
+        },
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
