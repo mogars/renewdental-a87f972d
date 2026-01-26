@@ -269,7 +269,15 @@ const PatientDetail = () => {
                 {patient.date_of_birth && (
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span>{format(new Date(patient.date_of_birth), "MMMM d, yyyy")}</span>
+                    <span>
+                      {(() => {
+                        try {
+                          return format(new Date(patient.date_of_birth), "MMMM d, yyyy");
+                        } catch {
+                          return patient.date_of_birth;
+                        }
+                      })()}
+                    </span>
                   </div>
                 )}
                 {patient.address && (

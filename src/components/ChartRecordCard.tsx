@@ -61,7 +61,15 @@ const ChartRecordCard = ({
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
               <div className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" />
-                <span>{format(new Date(recordDate), "MMM d, yyyy")}</span>
+                <span>
+                  {(() => {
+                    try {
+                      return format(new Date(recordDate), "MMM d, yyyy");
+                    } catch {
+                      return recordDate;
+                    }
+                  })()}
+                </span>
               </div>
               {toothNumber && (
                 <div className="flex items-center gap-1.5">

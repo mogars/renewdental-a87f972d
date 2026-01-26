@@ -165,7 +165,13 @@ const ChartRecordsTable = ({
                 >
                   {/* Date Column */}
                   <TableCell className="border-r border-border font-medium">
-                    {format(new Date(record.record_date), "MMM d, yyyy")}
+                    {(() => {
+                      try {
+                        return format(new Date(record.record_date), "MMM d, yyyy");
+                      } catch {
+                        return record.record_date;
+                      }
+                    })()}
                   </TableCell>
 
                   {/* Service Column */}
