@@ -54,13 +54,19 @@ serve(async (req) => {
 
     if (!clientId || !clientSecret) {
       return new Response(
-        JSON.stringify({ error: "Cognito credentials not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          success: false,
+          error: "Cognito credentials not configured",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const request: AuthRequest = await req.json();
     const { action, email, password, code, refreshToken, accessToken } = request;
+
+    // Safe debug info (no secrets/passwords)
+    console.log("cognito-auth", { action, region, clientId });
 
     let result: Record<string, unknown>;
 
@@ -68,8 +74,8 @@ serve(async (req) => {
       case "signIn": {
         if (!email || !password) {
           return new Response(
-            JSON.stringify({ error: "Email and password are required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ success: false, error: "Email and password are required" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
         const secretHash = await computeSecretHash(email, clientId, clientSecret);
@@ -88,8 +94,8 @@ serve(async (req) => {
       case "signUp": {
         if (!email || !password) {
           return new Response(
-            JSON.stringify({ error: "Email and password are required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ success: false, error: "Email and password are required" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
         const secretHash = await computeSecretHash(email, clientId, clientSecret);
@@ -106,8 +112,8 @@ serve(async (req) => {
       case "confirmSignUp": {
         if (!email || !code) {
           return new Response(
-            JSON.stringify({ error: "Email and code are required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ success: false, error: "Email and code are required" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
         const secretHash = await computeSecretHash(email, clientId, clientSecret);
@@ -123,8 +129,8 @@ serve(async (req) => {
       case "refreshToken": {
         if (!refreshToken || !email) {
           return new Response(
-            JSON.stringify({ error: "Refresh token and email are required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ success: false, error: "Refresh token and email are required" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
         const secretHash = await computeSecretHash(email, clientId, clientSecret);
@@ -142,8 +148,8 @@ serve(async (req) => {
       case "signOut": {
         if (!accessToken) {
           return new Response(
-            JSON.stringify({ error: "Access token is required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ success: false, error: "Access token is required" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
         result = await cognitoRequest(region, "GlobalSignOut", {
@@ -154,8 +160,8 @@ serve(async (req) => {
 
       default:
         return new Response(
-          JSON.stringify({ error: "Invalid action" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ success: false, error: "Invalid action" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }
 
@@ -163,8 +169,13 @@ serve(async (req) => {
     if (result.__type) {
       const errorMessage = (result.message as string) || "Authentication failed";
       return new Response(
-        JSON.stringify({ error: errorMessage, type: result.__type }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          success: false,
+          error: errorMessage,
+          type: result.__type,
+          debug: { action, region, clientId },
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -175,8 +186,8 @@ serve(async (req) => {
   } catch (error) {
     console.error("Cognito auth error:", error);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: false, error: "Internal server error" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
