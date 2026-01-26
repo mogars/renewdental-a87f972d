@@ -25,26 +25,26 @@ function convertPlaceholders(sql: string): string {
 // Convert PostgreSQL-specific syntax to MySQL
 function convertQuery(sql: string): string {
   let converted = convertPlaceholders(sql);
-  
+
   // Convert RETURNING * to nothing (MySQL doesn't support it directly)
   // We'll handle this separately in the query functions
   converted = converted.replace(/\s+RETURNING\s+\*/gi, '');
   converted = converted.replace(/\s+RETURNING\s+\w+/gi, '');
-  
+
   // Convert PostgreSQL boolean literals
   converted = converted.replace(/\btrue\b/gi, '1');
   converted = converted.replace(/\bfalse\b/gi, '0');
-  
+
   // Convert json_build_object to JSON_OBJECT
   converted = converted.replace(/json_build_object\s*\(/gi, 'JSON_OBJECT(');
-  
+
   // Convert ON CONFLICT to ON DUPLICATE KEY UPDATE
   const onConflictMatch = converted.match(/ON\s+CONFLICT\s*\([^)]+\)\s+DO\s+NOTHING/gi);
   if (onConflictMatch) {
-    converted = converted.replace(/ON\s+CONFLICT\s*\([^)]+\)\s+DO\s+NOTHING/gi, 
+    converted = converted.replace(/ON\s+CONFLICT\s*\([^)]+\)\s+DO\s+NOTHING/gi,
       'ON DUPLICATE KEY UPDATE id = id');
   }
-  
+
   return converted;
 }
 
@@ -54,6 +54,10 @@ export async function query<T = any>(text: string, params?: any[]): Promise<T[]>
     const convertedQuery = convertQuery(text);
     const [rows] = await connection.query<RowDataPacket[]>(convertedQuery, params);
     return rows as T[];
+  } catch (error) {
+    console.error(`Database query error: ${text}`);
+    console.error(error);
+    throw error;
   } finally {
     connection.release();
   }
@@ -74,7 +78,7 @@ export async function insertAndReturn<T = any>(
   try {
     const convertedQuery = convertQuery(insertQuery);
     const [result] = await connection.query<ResultSetHeader>(convertedQuery, params);
-    
+
     // For UUIDs, the ID should be in params[0]
     const id = params[0];
     const [rows] = await connection.query<RowDataPacket[]>(
@@ -98,7 +102,7 @@ export async function updateAndReturn<T = any>(
   try {
     const convertedQuery = convertQuery(updateQuery);
     await connection.query<ResultSetHeader>(convertedQuery, params);
-    
+
     const id = params[idParamIndex];
     const [rows] = await connection.query<RowDataPacket[]>(
       `SELECT * FROM ${tableName} WHERE id = ?`,

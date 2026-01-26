@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_AWS_API_URL || 'http://localhost:3001';
 
 export async function apiGet<T>(path: string): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
