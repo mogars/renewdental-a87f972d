@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, MessageSquare, Save } from "lucide-react";
@@ -95,84 +94,71 @@ export function SmsTemplateSettings() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          SMS Template
-        </CardTitle>
-        <CardDescription>
-          Customize the message that gets sent to patients for appointment reminders
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="sms-template">Message Template</Label>
-          <Textarea
-            id="sms-template"
-            value={template}
-            onChange={(e) => handleTemplateChange(e.target.value)}
-            className="min-h-[120px] font-mono text-sm"
-            placeholder="Enter your SMS template..."
-          />
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {charCount} characters ({smsCount} SMS{smsCount !== 1 ? "s" : ""})
-            </span>
-            {isDirty && (
-              <span className="text-amber-500 dark:text-amber-400">Unsaved changes</span>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Available Placeholders</Label>
-          <p className="text-xs text-muted-foreground mb-2">
-            Click a placeholder to insert it into your template
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {PLACEHOLDERS.map(({ key, description }) => (
-              <Badge
-                key={key}
-                variant="secondary"
-                className="cursor-pointer hover:bg-secondary/80"
-                onClick={() => insertPlaceholder(key)}
-                title={description}
-              >
-                {key}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex gap-2 pt-2">
-          <Button
-            onClick={handleSave}
-            disabled={!isDirty || updateTemplate.isPending}
-          >
-            {updateTemplate.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            Save Template
-          </Button>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="sms-template">Șablon Mesaj</Label>
+        <Textarea
+          id="sms-template"
+          value={template}
+          onChange={(e) => handleTemplateChange(e.target.value)}
+          className="min-h-[120px] font-mono text-sm"
+          placeholder="Introdu șablonul SMS..."
+        />
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            {charCount} caractere ({smsCount} SMS{smsCount !== 1 ? "-uri" : ""})
+          </span>
           {isDirty && (
-            <Button variant="outline" onClick={handleReset}>
-              Cancel
-            </Button>
+            <span className="text-amber-500 dark:text-amber-400">Modificări nesalvate</span>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Placeholder-e Disponibile</Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          Click pe un placeholder pentru a-l insera în șablon
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {PLACEHOLDERS.map(({ key, description }) => (
+            <Badge
+              key={key}
+              variant="secondary"
+              className="cursor-pointer hover:bg-secondary/80"
+              onClick={() => insertPlaceholder(key)}
+              title={description}
+            >
+              {key}
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-2 pt-2">
+        <Button
+          onClick={handleSave}
+          disabled={!isDirty || updateTemplate.isPending}
+        >
+          {updateTemplate.isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          Salvează Șablon
+        </Button>
+        {isDirty && (
+          <Button variant="outline" onClick={handleReset}>
+            Anulează
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }

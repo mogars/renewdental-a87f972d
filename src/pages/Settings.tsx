@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +14,7 @@ import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { Plus, Pencil, Trash2, Loader2, Stethoscope, Users, Settings2, Bell } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Stethoscope, Users, Settings2, Bell, Clock, MessageSquare } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { UsersTab } from "@/components/user-management/UsersTab";
 import { SmsTemplateSettings } from "@/components/settings/SmsTemplateSettings";
@@ -342,63 +343,105 @@ const Settings = () => {
               <TabsContent value="general">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Bell className="h-5 w-5" />
-                      Notification Settings
-                    </CardTitle>
+                    <CardTitle>Setări Generale</CardTitle>
                     <CardDescription>
-                      Configure how notifications appear in the application
+                      Configurează setările aplicației
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label htmlFor="toast-duration" className="text-base">
-                            Notification Duration
-                          </Label>
-                          <p className="text-sm text-muted-foreground">
-                            How long notifications stay visible ({(settings.toastDuration / 1000).toFixed(1)} seconds)
-                          </p>
-                        </div>
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {(settings.toastDuration / 1000).toFixed(1)}s
-                        </span>
-                      </div>
-                      <Slider
-                        id="toast-duration"
-                        value={[settings.toastDuration]}
-                        onValueChange={(value) => updateSettings({ toastDuration: value[0] })}
-                        min={1000}
-                        max={15000}
-                        step={500}
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>1 second</span>
-                        <span>15 seconds</span>
-                      </div>
-                    </div>
+                  <CardContent>
+                    <Accordion type="multiple" className="w-full">
+                      <AccordionItem value="notifications">
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <Bell className="h-5 w-5 text-primary" />
+                            <div className="text-left">
+                              <p className="font-medium">Notificări</p>
+                              <p className="text-sm text-muted-foreground font-normal">
+                                Configurează durata notificărilor
+                              </p>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-4">
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <Label htmlFor="toast-duration" className="text-base">
+                                  Durata Notificărilor
+                                </Label>
+                                <p className="text-sm text-muted-foreground">
+                                  Cât timp rămân vizibile ({(settings.toastDuration / 1000).toFixed(1)} secunde)
+                                </p>
+                              </div>
+                              <span className="text-sm font-medium text-muted-foreground">
+                                {(settings.toastDuration / 1000).toFixed(1)}s
+                              </span>
+                            </div>
+                            <Slider
+                              id="toast-duration"
+                              value={[settings.toastDuration]}
+                              onValueChange={(value) => updateSettings({ toastDuration: value[0] })}
+                              min={1000}
+                              max={15000}
+                              step={500}
+                              className="w-full"
+                            />
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>1 secundă</span>
+                              <span>15 secunde</span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                toast({
+                                  title: "Test Notificare",
+                                  description: "Această notificare va dispărea după durata configurată.",
+                                });
+                              }}
+                            >
+                              Testează Notificare
+                            </Button>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
 
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        toast({
-                          title: "Test Notification",
-                          description: "This notification will disappear after the configured duration.",
-                        });
-                      }}
-                    >
-                      Test Notification
-                    </Button>
+                      <AccordionItem value="treatments">
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <Clock className="h-5 w-5 text-primary" />
+                            <div className="text-left">
+                              <p className="font-medium">Tipuri de Tratament</p>
+                              <p className="text-sm text-muted-foreground font-normal">
+                                Configurează tratamentele și duratele lor
+                              </p>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-4">
+                          <TreatmentTypesSettings />
+                        </AccordionContent>
+                      </AccordionItem>
+
+                      <AccordionItem value="sms">
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center gap-3">
+                            <MessageSquare className="h-5 w-5 text-primary" />
+                            <div className="text-left">
+                              <p className="font-medium">Șablon SMS</p>
+                              <p className="text-sm text-muted-foreground font-normal">
+                                Personalizează mesajele de reminder
+                              </p>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-4">
+                          <SmsTemplateSettings />
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
                   </CardContent>
                 </Card>
-
-                <div className="mt-6">
-                  <TreatmentTypesSettings />
-                </div>
-
-                <SmsTemplateSettings />
               </TabsContent>
             </>
           )}
