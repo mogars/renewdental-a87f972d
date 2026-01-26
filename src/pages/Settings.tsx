@@ -181,12 +181,12 @@ const Settings = () => {
                   <Users className="h-4 w-4" />
                   Users
                 </TabsTrigger>
+                <TabsTrigger value="doctors" className="flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4" />
+                  Doctors
+                </TabsTrigger>
               </>
             )}
-            <TabsTrigger value="doctors" className="flex items-center gap-2">
-              <Stethoscope className="h-4 w-4" />
-              Doctors
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="doctors">
