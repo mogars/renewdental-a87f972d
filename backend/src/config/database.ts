@@ -3,12 +3,20 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const getEnvVar = (name: string): string => {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Environment variable ${name} is missing. Please check your .env file.`);
+  }
+  return value;
+};
+
 const poolConfig: PoolOptions = {
-  host: process.env.DATABASE_HOST || 'localhost',
-  port: parseInt(process.env.DATABASE_PORT || '3306'),
-  database: process.env.DATABASE_NAME || 'dental_clinic',
-  user: process.env.DATABASE_USER || 'root',
-  password: process.env.DATABASE_PASSWORD || '',
+  host: getEnvVar('DATABASE_HOST'),
+  port: parseInt(getEnvVar('DATABASE_PORT')),
+  database: getEnvVar('DATABASE_NAME'),
+  user: getEnvVar('DATABASE_USER'),
+  password: getEnvVar('DATABASE_PASSWORD'),
   waitForConnections: true,
   connectionLimit: 20,
   queueLimit: 0,

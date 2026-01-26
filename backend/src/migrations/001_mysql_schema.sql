@@ -1,9 +1,6 @@
 -- MySQL Database Schema for Dental Clinic
 -- Run this script to create all tables
 
-CREATE DATABASE IF NOT EXISTS dental_clinic;
-USE dental_clinic;
-
 -- Patients table
 CREATE TABLE IF NOT EXISTS patients (
   id VARCHAR(36) PRIMARY KEY,
