@@ -1,32 +1,8 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
-import { apiGet } from "@/services/api";
-import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import type { Profile } from "@/types/database";
 
 const Header = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, signOut } = useAuth();
-  const { toast } = useToast();
-
-  const { data: profile } = useQuery({
-    queryKey: ["userProfile", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      try {
-        const data = await apiGet<Profile[]>(`/users/${user.id}/profile`);
-        return data && data.length > 0 ? data[0] : null;
-      } catch {
-        return null;
-      }
-    },
-    enabled: !!user?.id,
-  });
 
   const navItems = [
     { href: "/", label: "Home" },
@@ -34,23 +10,6 @@ const Header = () => {
     { href: "/appointments", label: "Appointments" },
     { href: "/settings", label: "Settings" },
   ];
-
-  const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to sign out. Please try again.",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Signed out",
-        description: "You have been signed out successfully.",
-      });
-      navigate("/login");
-    }
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/80 backdrop-blur-md">
@@ -78,42 +37,22 @@ const Header = () => {
           </span>
         </Link>
 
-        <div className="flex items-center gap-4">
-          <nav className="flex items-center gap-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-                  location.pathname === item.href
-                    ? "bg-secondary text-secondary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          {user && (
-            <div className="flex items-center gap-2 pl-4 border-l border-border">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground hidden md:flex">
-                <User className="h-4 w-4" />
-                <span>{profile?.display_name || user.email}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSignOut}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="ml-2 hidden sm:inline">Sign out</span>
-              </Button>
-            </div>
-          )}
-        </div>
+        <nav className="flex items-center gap-1">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              className={cn(
+                "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                location.pathname === item.href
+                  ? "bg-secondary text-secondary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
       </div>
     </header>
   );
