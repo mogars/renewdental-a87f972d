@@ -1,20 +1,16 @@
-import type { AppRole } from '@/types/database';
+import { useAuth } from './AuthContext';
 
-// Local admin user - full access without authentication
 export const useUserRole = () => {
-  const roles: AppRole[] = ['admin', 'staff', 'dentist'];
+  const { user, isLoading, isAdmin, isStaff, isCheckup: isDentist } = useAuth() as any;
+  // Note: Adjusting type names to match useAuth names or adding them to useAuth
 
-  const hasRole = (role: AppRole) => roles.includes(role);
-  const isAdmin = true;
-  const isStaff = true;
-  const isDentist = true;
+  const auth = useAuth();
 
   return {
-    roles,
-    isLoading: false,
-    hasRole,
-    isAdmin,
-    isStaff,
-    isDentist,
+    roles: auth.user?.role ? [auth.user.role] : [],
+    isLoading: auth.isLoading,
+    isAdmin: auth.isAdmin,
+    isStaff: auth.isStaff,
+    isDentist: auth.isDentist,
   };
 };

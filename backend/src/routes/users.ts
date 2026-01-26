@@ -7,9 +7,7 @@ const router = Router();
 // Create new user (profile + role)
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { email, role } = req.body;
-    // Note: In this simple local version we don't handle password hashing
-    // as it's intended for local development/demonstration.
+    const { email, role, password } = req.body;
 
     const userId = uuidv4();
     const profileId = uuidv4();
@@ -17,11 +15,11 @@ router.post('/', async (req: Request, res: Response) => {
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     await transaction(async (connection) => {
-      // Create profile
+      // Create profile with password
       await connection.query(
-        `INSERT INTO profiles (id, user_id, email, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)`,
-        [profileId, userId, email, now, now]
+        `INSERT INTO profiles (id, user_id, email, password, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [profileId, userId, email, password, now, now]
       );
 
       // Create role
@@ -41,6 +39,35 @@ router.post('/', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error creating user:', error);
     res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// Login route
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    const profile = await queryOne(
+      'SELECT p.*, ur.role FROM profiles p JOIN user_roles ur ON p.user_id = ur.user_id WHERE p.email = ?',
+      [email]
+    );
+
+    if (!profile || profile.password !== password) {
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
+    }
+
+    // In a real app, generate and return a JWT here
+    res.json({
+      id: profile.user_id,
+      email: profile.email,
+      displayName: profile.display_name,
+      role: profile.role,
+      token: 'mock-jwt-token'
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
   }
 });
 
