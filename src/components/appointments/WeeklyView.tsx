@@ -1,22 +1,11 @@
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Tables } from "@/integrations/supabase/types";
 import { useCalendarSettings } from "@/hooks/useCalendarSettings";
-
-type Doctor = Tables<"doctors">;
-type AppointmentWithPatient = Tables<"appointments"> & {
-  patients: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    phone: string | null;
-    email: string | null;
-  } | null;
-};
+import type { AppointmentWithPatient, Doctor } from "@/types/database";
 
 interface WeeklyViewProps {
   currentDate: Date;
@@ -71,12 +60,7 @@ export const WeeklyView = ({
   const { data: doctors } = useQuery({
     queryKey: ["doctors"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("doctors")
-        .select("*")
-        .order("last_name", { ascending: true });
-      if (error) throw error;
-      return data as Doctor[];
+      return apiGet<Doctor[]>("/doctors");
     },
   });
 
@@ -108,6 +92,7 @@ export const WeeklyView = ({
     const doctor = doctors.find((d) => d.id === doctorId);
     return doctor ? `Dr. ${doctor.first_name.charAt(0)}. ${doctor.last_name}` : "";
   };
+
   const getAppointmentsForDayAndHour = (date: Date, hour: number) => {
     return appointments.filter((apt) => {
       if (!isSameDay(parseISO(apt.appointment_date), date)) return false;

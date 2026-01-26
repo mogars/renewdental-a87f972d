@@ -2,10 +2,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { Profile } from "@/types/database";
 
 const Header = () => {
   const location = useLocation();
@@ -17,12 +18,12 @@ const Header = () => {
     queryKey: ["userProfile", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data } = await supabase
-        .from("profiles")
-        .select("display_name")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      return data;
+      try {
+        const data = await apiGet<Profile[]>(`/users/${user.id}/profile`);
+        return data && data.length > 0 ? data[0] : null;
+      } catch {
+        return null;
+      }
     },
     enabled: !!user?.id,
   });

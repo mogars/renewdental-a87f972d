@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/services/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,20 +13,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Tables } from "@/integrations/supabase/types";
 import { PatientCombobox } from "./PatientCombobox";
-
-type Patient = Tables<"patients">;
-type Doctor = Tables<"doctors">;
-type AppointmentWithPatient = Tables<"appointments"> & {
-  patients: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    phone: string | null;
-    email: string | null;
-  } | null;
-};
+import type { Patient, Doctor, TreatmentType, AppointmentWithPatient, Appointment, ChartRecord } from "@/types/database";
 
 interface AppointmentFormProps {
   open: boolean;
@@ -37,13 +25,6 @@ interface AppointmentFormProps {
   editingAppointmentId: string | null;
   appointments: AppointmentWithPatient[];
 }
-
-type TreatmentType = {
-  id: string;
-  name: string;
-  duration_minutes: number;
-  is_active: boolean;
-};
 
 export const AppointmentForm = ({
   open,
@@ -76,13 +57,7 @@ export const AppointmentForm = ({
   const { data: doctors } = useQuery({
     queryKey: ["doctors", "active"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("doctors")
-        .select("*")
-        .eq("is_active", true)
-        .order("last_name", { ascending: true });
-      if (error) throw error;
-      return data as Doctor[];
+      return apiGet<Doctor[]>("/doctors?is_active=true");
     },
   });
 
@@ -90,13 +65,7 @@ export const AppointmentForm = ({
   const { data: treatmentTypes } = useQuery({
     queryKey: ["treatmentTypes", "active"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("treatment_types")
-        .select("id, name, duration_minutes, is_active")
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data as TreatmentType[];
+      return apiGet<TreatmentType[]>("/treatment-types?is_active=true");
     },
   });
 
@@ -173,7 +142,7 @@ export const AppointmentForm = ({
       const appointmentDate = format(formData.date, "yyyy-MM-dd");
 
       // Create appointment
-      const { error: appointmentError } = await supabase.from("appointments").insert({
+      await apiPost<Appointment>("/appointments", {
         patient_id: formData.patientId,
         title: formData.treatmentType,
         appointment_date: appointmentDate,
@@ -186,10 +155,8 @@ export const AppointmentForm = ({
         status: formData.status,
       });
 
-      if (appointmentError) throw appointmentError;
-
       // Also create a chart record for this appointment
-      const { error: chartError } = await supabase.from("chart_records").insert({
+      await apiPost<ChartRecord>("/chart-records", {
         patient_id: formData.patientId,
         record_date: appointmentDate,
         treatment_type: formData.treatmentType,
@@ -197,8 +164,6 @@ export const AppointmentForm = ({
         dentist_name: dentistName,
         status: formData.status === "completed" ? "completed" : "scheduled",
       });
-
-      if (chartError) throw chartError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
@@ -228,53 +193,18 @@ export const AppointmentForm = ({
       const newAppointmentDate = format(formData.date, "yyyy-MM-dd");
 
       // Update appointment
-      const { error: appointmentError } = await supabase
-        .from("appointments")
-        .update({
-          patient_id: formData.patientId,
-          title: formData.treatmentType,
-          appointment_date: newAppointmentDate,
-          start_time: formData.startTime,
-          end_time: formData.endTime,
-          treatment_type: formData.treatmentType,
-          doctor_id: formData.doctorId || null,
-          dentist_name: dentistName,
-          notes: formData.notes || null,
-          status: formData.status,
-        })
-        .eq("id", editingAppointmentId);
-
-      if (appointmentError) throw appointmentError;
-
-      // Try to find and update the corresponding chart record
-      // Match by original patient_id, record_date, and treatment_type
-      const originalDate = editingAppointment.appointment_date;
-      const originalTreatmentType = editingAppointment.treatment_type;
-
-      const { data: existingRecord } = await supabase
-        .from("chart_records")
-        .select("id")
-        .eq("patient_id", editingAppointment.patient_id)
-        .eq("record_date", originalDate)
-        .eq("treatment_type", originalTreatmentType || "")
-        .maybeSingle();
-
-      if (existingRecord) {
-        // Update existing chart record
-        const { error: chartError } = await supabase
-          .from("chart_records")
-          .update({
-            patient_id: formData.patientId,
-            record_date: newAppointmentDate,
-            treatment_type: formData.treatmentType,
-            description: formData.notes || null,
-            dentist_name: dentistName,
-            status: formData.status === "completed" ? "completed" : formData.status === "cancelled" ? "cancelled" : "scheduled",
-          })
-          .eq("id", existingRecord.id);
-
-        if (chartError) throw chartError;
-      }
+      await apiPut<Appointment>(`/appointments/${editingAppointmentId}`, {
+        patient_id: formData.patientId,
+        title: formData.treatmentType,
+        appointment_date: newAppointmentDate,
+        start_time: formData.startTime,
+        end_time: formData.endTime,
+        treatment_type: formData.treatmentType,
+        doctor_id: formData.doctorId || null,
+        dentist_name: dentistName,
+        notes: formData.notes || null,
+        status: formData.status,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
@@ -282,7 +212,7 @@ export const AppointmentForm = ({
       onOpenChange(false);
       toast({
         title: "Appointment updated",
-        description: "The appointment and chart record have been updated.",
+        description: "The appointment has been updated.",
       });
     },
     onError: (error) => {
@@ -298,13 +228,7 @@ export const AppointmentForm = ({
   const deleteAppointment = useMutation({
     mutationFn: async () => {
       if (!editingAppointmentId) return;
-
-      const { error } = await supabase
-        .from("appointments")
-        .delete()
-        .eq("id", editingAppointmentId);
-
-      if (error) throw error;
+      await apiDelete(`/appointments/${editingAppointmentId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
@@ -496,21 +420,18 @@ export const AppointmentForm = ({
                 disabled={deleteAppointment.isPending}
               >
                 {deleteAppointment.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                 )}
+                Delete
               </Button>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="ml-auto"
-            >
+            <div className="flex-1" />
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !formData.patientId || !formData.treatmentType || !formData.doctorId}>
+            <Button type="submit" disabled={isLoading || !formData.patientId}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingAppointmentId ? "Update" : "Create"}
             </Button>

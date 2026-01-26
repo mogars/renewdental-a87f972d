@@ -1,9 +1,9 @@
-// API Configuration for switching between Supabase and AWS RDS backend
-// Set USE_AWS_BACKEND=true to use the Express/RDS backend instead of Supabase
+// API Configuration - Now using PostgreSQL/AWS RDS backend
+// The app is configured to use the Express/RDS backend with Cognito auth
 
 export const config = {
-  // Toggle this to switch between backends
-  useAwsBackend: import.meta.env.VITE_USE_AWS_BACKEND === 'true',
+  // AWS Backend is now the default
+  useAwsBackend: true,
   
   // AWS Backend URL (Express server)
   awsApiUrl: import.meta.env.VITE_AWS_API_URL || 'http://localhost:3001',
@@ -15,7 +15,7 @@ export const config = {
     region: import.meta.env.VITE_COGNITO_REGION || 'us-east-1',
   },
   
-  // Supabase configuration (existing)
+  // Supabase configuration (legacy - kept for reference)
   supabase: {
     url: import.meta.env.VITE_SUPABASE_URL,
     anonKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,

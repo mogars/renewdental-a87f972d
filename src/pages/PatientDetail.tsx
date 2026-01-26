@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/services/api";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Header from "@/components/Header";
 import PatientForm, { PatientFormData } from "@/components/PatientForm";
@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { format, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import type { Patient, ChartRecord } from "@/types/database";
 
 const PatientDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -53,49 +54,30 @@ const PatientDetail = () => {
   const { data: patient, isLoading: isLoadingPatient } = useQuery({
     queryKey: ["patient", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patients")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
+      return apiGet<Patient>(`/patients/${id}`);
     },
   });
 
   const { data: chartRecords, isLoading: isLoadingRecords } = useQuery({
     queryKey: ["chart_records", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("chart_records")
-        .select("*")
-        .eq("patient_id", id)
-        .order("record_date", { ascending: false });
-
-      if (error) throw error;
-      return data;
+      return apiGet<ChartRecord[]>(`/chart-records?patient_id=${id}`);
     },
   });
 
   const updatePatient = useMutation({
     mutationFn: async (data: PatientFormData) => {
-      const { error } = await supabase
-        .from("patients")
-        .update({
-          first_name: data.first_name,
-          last_name: data.last_name,
-          email: data.email || null,
-          phone: data.phone || null,
-          date_of_birth: data.date_of_birth || null,
-          address: data.address || null,
-          insurance_provider: data.insurance_provider || null,
-          insurance_id: data.insurance_id || null,
-          notes: data.notes || null,
-        })
-        .eq("id", id);
-
-      if (error) throw error;
+      return apiPut<Patient>(`/patients/${id}`, {
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email || null,
+        phone: data.phone || null,
+        date_of_birth: data.date_of_birth || null,
+        address: data.address || null,
+        insurance_provider: data.insurance_provider || null,
+        insurance_id: data.insurance_id || null,
+        notes: data.notes || null,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patient", id] });
@@ -109,8 +91,7 @@ const PatientDetail = () => {
 
   const deletePatient = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("patients").delete().eq("id", id);
-      if (error) throw error;
+      return apiDelete(`/patients/${id}`);
     },
     onSuccess: () => {
       toast({ title: "Patient deleted successfully" });
@@ -123,7 +104,7 @@ const PatientDetail = () => {
 
   const createChartRecord = useMutation({
     mutationFn: async (data: ChartRecordFormData) => {
-      const { error } = await supabase.from("chart_records").insert({
+      return apiPost<ChartRecord>("/chart-records", {
         patient_id: id,
         record_date: format(data.record_date, "yyyy-MM-dd"),
         treatment_type: data.treatment_type,
@@ -133,8 +114,6 @@ const PatientDetail = () => {
         cost: data.cost ? parseFloat(data.cost) : null,
         status: data.status,
       });
-
-      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chart_records", id] });
@@ -148,20 +127,15 @@ const PatientDetail = () => {
 
   const updateChartRecord = useMutation({
     mutationFn: async (data: ChartRecordFormData) => {
-      const { error } = await supabase
-        .from("chart_records")
-        .update({
-          record_date: format(data.record_date, "yyyy-MM-dd"),
-          treatment_type: data.treatment_type,
-          tooth_number: data.tooth_number || null,
-          description: data.description || null,
-          dentist_name: data.dentist_name || null,
-          cost: data.cost ? parseFloat(data.cost) : null,
-          status: data.status,
-        })
-        .eq("id", selectedRecordId);
-
-      if (error) throw error;
+      return apiPut<ChartRecord>(`/chart-records/${selectedRecordId}`, {
+        record_date: format(data.record_date, "yyyy-MM-dd"),
+        treatment_type: data.treatment_type,
+        tooth_number: data.tooth_number || null,
+        description: data.description || null,
+        dentist_name: data.dentist_name || null,
+        cost: data.cost ? parseFloat(data.cost) : null,
+        status: data.status,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chart_records", id] });
@@ -177,12 +151,7 @@ const PatientDetail = () => {
 
   const deleteChartRecord = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from("chart_records")
-        .delete()
-        .eq("id", selectedRecordId);
-
-      if (error) throw error;
+      return apiDelete(`/chart-records/${selectedRecordId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chart_records", id] });

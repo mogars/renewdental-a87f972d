@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,9 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Loader2, Stethoscope } from "lucide-react";
-import { Tables } from "@/integrations/supabase/types";
-
-type Doctor = Tables<"doctors">;
+import type { Doctor } from "@/types/database";
 
 export const DoctorsSettings = () => {
   const { toast } = useToast();
@@ -29,25 +27,19 @@ export const DoctorsSettings = () => {
   const { data: doctors, isLoading } = useQuery({
     queryKey: ["doctors"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("doctors")
-        .select("*")
-        .order("last_name", { ascending: true });
-      if (error) throw error;
-      return data;
+      return apiGet<Doctor[]>("/doctors");
     },
   });
 
   const createDoctor = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("doctors").insert({
+      return apiPost<Doctor>("/doctors", {
         first_name: formData.first_name,
         last_name: formData.last_name,
         specialty: formData.specialty || null,
         phone: formData.phone || null,
         email: formData.email || null,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["doctors"] });
@@ -63,17 +55,13 @@ export const DoctorsSettings = () => {
   const updateDoctor = useMutation({
     mutationFn: async () => {
       if (!editingDoctor) return;
-      const { error } = await supabase
-        .from("doctors")
-        .update({
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          specialty: formData.specialty || null,
-          phone: formData.phone || null,
-          email: formData.email || null,
-        })
-        .eq("id", editingDoctor.id);
-      if (error) throw error;
+      return apiPut<Doctor>(`/doctors/${editingDoctor.id}`, {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        specialty: formData.specialty || null,
+        phone: formData.phone || null,
+        email: formData.email || null,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["doctors"] });
@@ -88,11 +76,7 @@ export const DoctorsSettings = () => {
 
   const toggleDoctorActive = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const { error } = await supabase
-        .from("doctors")
-        .update({ is_active: isActive })
-        .eq("id", id);
-      if (error) throw error;
+      return apiPut<Doctor>(`/doctors/${id}`, { is_active: isActive });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["doctors"] });
@@ -104,8 +88,7 @@ export const DoctorsSettings = () => {
 
   const deleteDoctor = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("doctors").delete().eq("id", id);
-      if (error) throw error;
+      return apiDelete(`/doctors/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["doctors"] });

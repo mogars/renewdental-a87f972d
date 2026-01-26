@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet } from "@/services/api";
+import type { Doctor, TreatmentType } from "@/types/database";
 
 const chartRecordSchema = z.object({
   record_date: z.date({ required_error: "Date is required" }),
@@ -30,18 +31,11 @@ export type ChartRecordFormData = z.infer<typeof chartRecordSchema>;
 interface ChartRecordFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: ChartRecordFormData) => Promise<void>;
+  onSubmit: (data: ChartRecordFormData) => Promise<unknown>;
   defaultValues?: Partial<ChartRecordFormData>;
   isEditing?: boolean;
   isLoading?: boolean;
 }
-
-type TreatmentTypeDB = {
-  id: string;
-  name: string;
-  duration_minutes: number;
-  is_active: boolean;
-};
 
 const ChartRecordForm = ({
   open,
@@ -55,12 +49,7 @@ const ChartRecordForm = ({
   const { data: doctors = [] } = useQuery({
     queryKey: ["doctors-active"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("doctors")
-        .select("id, first_name, last_name")
-        .eq("is_active", true)
-        .order("last_name");
-      if (error) throw error;
+      const data = await apiGet<Doctor[]>("/doctors?is_active=true");
       return data;
     },
   });
@@ -69,13 +58,8 @@ const ChartRecordForm = ({
   const { data: treatmentTypes = [] } = useQuery({
     queryKey: ["treatmentTypes", "active"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("treatment_types")
-        .select("id, name, duration_minutes, is_active")
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data as TreatmentTypeDB[];
+      const data = await apiGet<TreatmentType[]>("/treatment-types?is_active=true");
+      return data;
     },
   });
 

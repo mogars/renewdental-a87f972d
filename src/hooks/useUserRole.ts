@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import type { Database } from '@/integrations/supabase/types';
+import { apiGet } from '@/services/api';
+import type { AppRole } from '@/types/database';
 
-type AppRole = Database['public']['Enums']['app_role'];
+interface UserRoleResponse {
+  role: AppRole;
+}
 
 export const useUserRole = () => {
   const { user } = useAuth();
@@ -13,12 +15,7 @@ export const useUserRole = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
+      const data = await apiGet<UserRoleResponse[]>(`/users/${user.id}/roles`);
       return data.map(r => r.role);
     },
     enabled: !!user?.id,
