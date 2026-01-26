@@ -36,23 +36,12 @@ interface ChartRecordFormProps {
   isLoading?: boolean;
 }
 
-const treatmentTypes = [
-  "Consultație",
-  "Curățare",
-  "Plombă",
-  "Coroană",
-  "Tratament de canal",
-  "Extracție",
-  "Albire",
-  "Radiografie",
-  "Control",
-  "Ortodonție",
-  "Implant",
-  "Punte dentară",
-  "Proteză",
-  "Tratament parodontal",
-  "Altele",
-];
+type TreatmentTypeDB = {
+  id: string;
+  name: string;
+  duration_minutes: number;
+  is_active: boolean;
+};
 
 const ChartRecordForm = ({
   open,
@@ -73,6 +62,20 @@ const ChartRecordForm = ({
         .order("last_name");
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Fetch treatment types from database
+  const { data: treatmentTypes = [] } = useQuery({
+    queryKey: ["treatmentTypes", "active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("treatment_types")
+        .select("id, name, duration_minutes, is_active")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as TreatmentTypeDB[];
     },
   });
 
@@ -154,8 +157,8 @@ const ChartRecordForm = ({
                     </FormControl>
                     <SelectContent>
                       {treatmentTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
+                        <SelectItem key={type.id} value={type.name}>
+                          {type.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

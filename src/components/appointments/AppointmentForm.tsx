@@ -38,18 +38,12 @@ interface AppointmentFormProps {
   appointments: AppointmentWithPatient[];
 }
 
-const TREATMENT_TYPES = [
-  "Consultație",
-  "Curățare",
-  "Plombă",
-  "Coroană",
-  "Tratament de canal",
-  "Extracție",
-  "Albire",
-  "Radiografie",
-  "Control",
-  "Altele",
-];
+type TreatmentType = {
+  id: string;
+  name: string;
+  duration_minutes: number;
+  is_active: boolean;
+};
 
 export const AppointmentForm = ({
   open,
@@ -91,6 +85,53 @@ export const AppointmentForm = ({
       return data as Doctor[];
     },
   });
+
+  // Fetch treatment types with durations
+  const { data: treatmentTypes } = useQuery({
+    queryKey: ["treatmentTypes", "active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("treatment_types")
+        .select("id, name, duration_minutes, is_active")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as TreatmentType[];
+    },
+  });
+
+  // Helper function to calculate end time based on start time and duration
+  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + durationMinutes;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+  };
+
+  // Handle treatment type change - auto-calculate end time
+  const handleTreatmentTypeChange = (treatmentName: string) => {
+    const selectedType = treatmentTypes?.find(t => t.name === treatmentName);
+    const duration = selectedType?.duration_minutes || 60;
+    const newEndTime = calculateEndTime(formData.startTime, duration);
+    setFormData(prev => ({
+      ...prev,
+      treatmentType: treatmentName,
+      endTime: newEndTime,
+    }));
+  };
+
+  // Handle start time change - recalculate end time based on selected treatment
+  const handleStartTimeChange = (newStartTime: string) => {
+    const selectedType = treatmentTypes?.find(t => t.name === formData.treatmentType);
+    const duration = selectedType?.duration_minutes || 60;
+    const newEndTime = calculateEndTime(newStartTime, duration);
+    setFormData(prev => ({
+      ...prev,
+      startTime: newStartTime,
+      endTime: newEndTime,
+    }));
+  };
 
   useEffect(() => {
     if (editingAppointment) {
@@ -317,18 +358,24 @@ export const AppointmentForm = ({
             <Label>Treatment Type *</Label>
             <Select
               value={formData.treatmentType}
-              onValueChange={(value) => setFormData((prev) => ({ ...prev, treatmentType: value }))}
+              onValueChange={handleTreatmentTypeChange}
               required
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select treatment type" />
+                <SelectValue placeholder="Selectează tipul de tratament" />
               </SelectTrigger>
               <SelectContent>
-                {TREATMENT_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
+                {treatmentTypes && treatmentTypes.length > 0 ? (
+                  treatmentTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.name}>
+                      {type.name} ({type.duration_minutes} min)
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-types" disabled>
+                    Nu există tipuri de tratament. Adaugă din Setări.
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -367,7 +414,7 @@ export const AppointmentForm = ({
                 id="startTime"
                 type="time"
                 value={formData.startTime}
-                onChange={(e) => setFormData((prev) => ({ ...prev, startTime: e.target.value }))}
+                onChange={(e) => handleStartTimeChange(e.target.value)}
                 required
               />
             </div>

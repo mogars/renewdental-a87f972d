@@ -17,6 +17,7 @@ import { Plus, Pencil, Trash2, Loader2, Stethoscope, Users, Settings2, Bell } fr
 import { Tables } from "@/integrations/supabase/types";
 import { UsersTab } from "@/components/user-management/UsersTab";
 import { SmsTemplateSettings } from "@/components/settings/SmsTemplateSettings";
+import TreatmentTypesSettings from "@/components/settings/TreatmentTypesSettings";
 
 type Doctor = Tables<"doctors">;
 
@@ -392,6 +393,10 @@ const Settings = () => {
                     </Button>
                   </CardContent>
                 </Card>
+
+                <div className="mt-6">
+                  <TreatmentTypesSettings />
+                </div>
 
                 <SmsTemplateSettings />
               </TabsContent>
