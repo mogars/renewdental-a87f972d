@@ -1,11 +1,13 @@
-import { config } from '@/config/api';
+import { getCognitoClientConfig } from "@/lib/cognitoClientConfig";
 
 // Simple in-memory token storage for Cognito
 let accessToken: string | null = null;
 let idToken: string | null = null;
 let refreshToken: string | null = null;
 
-const COGNITO_DOMAIN = `https://cognito-idp.${config.cognito.region}.amazonaws.com`;
+function getCognitoEndpoint(region: string) {
+  return `https://cognito-idp.${region}.amazonaws.com`;
+}
 
 interface CognitoTokenResponse {
   access_token: string;
@@ -106,7 +108,8 @@ export async function signIn(
   password: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const response = await fetch(`${COGNITO_DOMAIN}`, {
+    const { clientId, region } = await getCognitoClientConfig();
+    const response = await fetch(getCognitoEndpoint(region), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-amz-json-1.1',
@@ -114,7 +117,7 @@ export async function signIn(
       },
       body: JSON.stringify({
         AuthFlow: 'USER_PASSWORD_AUTH',
-        ClientId: config.cognito.clientId,
+        ClientId: clientId,
         AuthParameters: {
           USERNAME: email,
           PASSWORD: password,
@@ -151,14 +154,15 @@ export async function signUp(
   password: string
 ): Promise<{ success: boolean; error?: string; userConfirmed?: boolean }> {
   try {
-    const response = await fetch(`${COGNITO_DOMAIN}`, {
+    const { clientId, region } = await getCognitoClientConfig();
+    const response = await fetch(getCognitoEndpoint(region), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-amz-json-1.1',
         'X-Amz-Target': 'AWSCognitoIdentityProviderService.SignUp',
       },
       body: JSON.stringify({
-        ClientId: config.cognito.clientId,
+        ClientId: clientId,
         Username: email,
         Password: password,
         UserAttributes: [
@@ -186,14 +190,15 @@ export async function confirmSignUp(
   code: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const response = await fetch(`${COGNITO_DOMAIN}`, {
+    const { clientId, region } = await getCognitoClientConfig();
+    const response = await fetch(getCognitoEndpoint(region), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-amz-json-1.1',
         'X-Amz-Target': 'AWSCognitoIdentityProviderService.ConfirmSignUp',
       },
       body: JSON.stringify({
-        ClientId: config.cognito.clientId,
+        ClientId: clientId,
         Username: email,
         ConfirmationCode: code,
       }),
@@ -218,7 +223,8 @@ export async function signOut(): Promise<void> {
   
   if (token) {
     try {
-      await fetch(`${COGNITO_DOMAIN}`, {
+      const { region } = await getCognitoClientConfig();
+      await fetch(getCognitoEndpoint(region), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-amz-json-1.1',
@@ -244,7 +250,8 @@ export async function refreshSession(): Promise<boolean> {
   }
 
   try {
-    const response = await fetch(`${COGNITO_DOMAIN}`, {
+    const { clientId, region } = await getCognitoClientConfig();
+    const response = await fetch(getCognitoEndpoint(region), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-amz-json-1.1',
@@ -252,7 +259,7 @@ export async function refreshSession(): Promise<boolean> {
       },
       body: JSON.stringify({
         AuthFlow: 'REFRESH_TOKEN_AUTH',
-        ClientId: config.cognito.clientId,
+        ClientId: clientId,
         AuthParameters: {
           REFRESH_TOKEN: refreshToken,
         },
