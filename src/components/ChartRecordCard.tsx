@@ -86,7 +86,7 @@ const ChartRecordCard = ({
               {cost && (
                 <div className="flex items-center gap-1.5">
                   <DollarSign className="h-3.5 w-3.5" />
-                  <span>{cost.toFixed(2)}</span>
+                  <span>{Number(cost).toFixed(2)}</span>
                 </div>
               )}
             </div>

@@ -203,7 +203,7 @@ const ChartRecordsTable = ({
                   <TableCell className="border-r border-border">
                     {record.cost ? (
                       <span className="font-medium">
-                        ${record.cost.toFixed(2)}
+                        ${Number(record.cost).toFixed(2)}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>

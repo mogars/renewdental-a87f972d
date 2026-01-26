@@ -51,19 +51,28 @@ const PatientDetail = () => {
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [editRecordData, setEditRecordData] = useState<Partial<ChartRecordFormData> | null>(null);
 
-  const { data: patient, isLoading: isLoadingPatient } = useQuery({
+  const { data: patient, isLoading: isLoadingPatient, error: patientError } = useQuery({
     queryKey: ["patient", id],
     queryFn: async () => {
-      return apiGet<Patient>(`/patients/${id}`);
+      console.log(`[DEBUG] Fetching patient with ID: ${id}`);
+      const data = await apiGet<Patient>(`/patients/${id}`);
+      console.log(`[DEBUG] Patient data received:`, data);
+      return data;
     },
   });
 
-  const { data: chartRecords, isLoading: isLoadingRecords } = useQuery({
+  const { data: chartRecords, isLoading: isLoadingRecords, error: recordsError } = useQuery({
     queryKey: ["chart_records", id],
     queryFn: async () => {
-      return apiGet<ChartRecord[]>(`/chart-records?patient_id=${id}`);
+      console.log(`[DEBUG] Fetching chart records for ID: ${id}`);
+      const data = await apiGet<ChartRecord[]>(`/chart-records?patient_id=${id}`);
+      console.log(`[DEBUG] Chart records received:`, data);
+      return data;
     },
   });
+
+  if (patientError) console.error('[DEBUG] Patient Error:', patientError);
+  if (recordsError) console.error('[DEBUG] Records Error:', recordsError);
 
   const updatePatient = useMutation({
     mutationFn: async (data: PatientFormData) => {
@@ -238,8 +247,8 @@ const PatientDetail = () => {
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-4">
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground font-semibold text-lg">
-                    {patient.first_name.charAt(0)}
-                    {patient.last_name.charAt(0)}
+                    {patient.first_name?.charAt(0) || '?'}
+                    {patient.last_name?.charAt(0) || '?'}
                   </div>
                   <div>
                     <CardTitle className="font-display text-lg">
