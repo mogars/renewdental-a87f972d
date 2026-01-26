@@ -16,6 +16,11 @@ interface DatabaseConfig {
   cognitoRegion: string;
   cognitoUserPoolId: string;
   cognitoClientId: string;
+  mysqlHost: string;
+  mysqlPort: string;
+  mysqlDatabase: string;
+  mysqlUser: string;
+  mysqlPassword: string;
 }
 
 const DEFAULT_CONFIG: DatabaseConfig = {
@@ -24,6 +29,11 @@ const DEFAULT_CONFIG: DatabaseConfig = {
   cognitoRegion: "us-east-1",
   cognitoUserPoolId: "",
   cognitoClientId: "",
+  mysqlHost: "localhost",
+  mysqlPort: "3306",
+  mysqlDatabase: "dental_clinic",
+  mysqlUser: "root",
+  mysqlPassword: "",
 };
 
 const DatabaseConnectionSettings = () => {
@@ -150,9 +160,9 @@ const DatabaseConnectionSettings = () => {
       {/* Backend Toggle */}
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div>
-          <Label className="text-base">Folosește Backend AWS</Label>
+          <Label className="text-base">Folosește Backend MySQL Local</Label>
           <p className="text-sm text-muted-foreground mt-1">
-            Activează pentru a folosi Express/RDS în loc de Lovable Cloud
+            Activează pentru a folosi Express + MySQL în loc de Lovable Cloud
           </p>
         </div>
         <Switch
@@ -185,8 +195,8 @@ const DatabaseConnectionSettings = () => {
 
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <div>
-                <p className="font-medium text-sm">AWS Backend</p>
-                <p className="text-xs text-muted-foreground">Express + RDS</p>
+                <p className="font-medium text-sm">MySQL Backend</p>
+                <p className="text-xs text-muted-foreground">Express + MySQL</p>
               </div>
               <StatusBadge status={awsStatus} />
             </div>
@@ -195,23 +205,23 @@ const DatabaseConnectionSettings = () => {
           <div className="flex items-center gap-2 pt-2">
             <span className="text-sm text-muted-foreground">Backend Activ:</span>
             <Badge variant={config.useAwsBackend ? "default" : "secondary"}>
-              {config.useAwsBackend ? "AWS RDS" : "Lovable Cloud"}
+              {config.useAwsBackend ? "MySQL Local" : "Lovable Cloud"}
             </Badge>
           </div>
         </CardContent>
       </Card>
 
-      {/* AWS Configuration */}
+      {/* MySQL Configuration */}
       {config.useAwsBackend && (
         <Card>
           <CardContent className="pt-6 space-y-4">
             <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-              Configurare AWS
+              Configurare MySQL
             </h4>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="aws-api-url">API URL</Label>
+                <Label htmlFor="aws-api-url">API URL (Express Server)</Label>
                 <Input
                   id="aws-api-url"
                   value={config.awsApiUrl}
@@ -219,37 +229,60 @@ const DatabaseConnectionSettings = () => {
                   placeholder="http://localhost:3001"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Adresa serverului Express
+                  Adresa serverului Express care se conectează la MySQL
                 </p>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="mysql-host">Host</Label>
+                  <Input
+                    id="mysql-host"
+                    value={config.mysqlHost}
+                    onChange={(e) => setConfig(prev => ({ ...prev, mysqlHost: e.target.value }))}
+                    placeholder="localhost"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="mysql-port">Port</Label>
+                  <Input
+                    id="mysql-port"
+                    value={config.mysqlPort}
+                    onChange={(e) => setConfig(prev => ({ ...prev, mysqlPort: e.target.value }))}
+                    placeholder="3306"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="cognito-region">Cognito Region</Label>
+                <Label htmlFor="mysql-database">Database</Label>
                 <Input
-                  id="cognito-region"
-                  value={config.cognitoRegion}
-                  onChange={(e) => setConfig(prev => ({ ...prev, cognitoRegion: e.target.value }))}
-                  placeholder="us-east-1"
+                  id="mysql-database"
+                  value={config.mysqlDatabase}
+                  onChange={(e) => setConfig(prev => ({ ...prev, mysqlDatabase: e.target.value }))}
+                  placeholder="dental_clinic"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cognito-user-pool">User Pool ID</Label>
+                <Label htmlFor="mysql-user">User</Label>
                 <Input
-                  id="cognito-user-pool"
-                  value={config.cognitoUserPoolId}
-                  onChange={(e) => setConfig(prev => ({ ...prev, cognitoUserPoolId: e.target.value }))}
-                  placeholder="eu-central-1_XXXXXXXX"
+                  id="mysql-user"
+                  value={config.mysqlUser}
+                  onChange={(e) => setConfig(prev => ({ ...prev, mysqlUser: e.target.value }))}
+                  placeholder="root"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cognito-client-id">Client ID</Label>
+                <Label htmlFor="mysql-password">Password</Label>
                 <Input
-                  id="cognito-client-id"
-                  value={config.cognitoClientId}
-                  onChange={(e) => setConfig(prev => ({ ...prev, cognitoClientId: e.target.value }))}
-                  placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  id="mysql-password"
+                  type="password"
+                  value={config.mysqlPassword}
+                  onChange={(e) => setConfig(prev => ({ ...prev, mysqlPassword: e.target.value }))}
+                  placeholder="••••••••"
                 />
               </div>
             </div>
