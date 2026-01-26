@@ -39,16 +39,16 @@ interface AppointmentFormProps {
 }
 
 const TREATMENT_TYPES = [
-  "Consultation",
-  "Cleaning",
-  "Filling",
-  "Crown",
-  "Root Canal",
-  "Extraction",
-  "Whitening",
-  "X-Ray",
-  "Check-up",
-  "Other",
+  "Consultație",
+  "Curățare",
+  "Plombă",
+  "Coroană",
+  "Tratament de canal",
+  "Extracție",
+  "Albire",
+  "Radiografie",
+  "Control",
+  "Altele",
 ];
 
 export const AppointmentForm = ({
