@@ -37,20 +37,21 @@ interface ChartRecordFormProps {
 }
 
 const treatmentTypes = [
-  "Curatare",
-  "Filling",
-  "Crown",
-  "Root Canal",
-  "Extraction",
-  "Whitening",
-  "X-Ray",
-  "Examination",
-  "Orthodontics",
+  "Consultație",
+  "Curățare",
+  "Plombă",
+  "Coroană",
+  "Tratament de canal",
+  "Extracție",
+  "Albire",
+  "Radiografie",
+  "Control",
+  "Ortodonție",
   "Implant",
-  "Bridge",
-  "Dentures",
-  "Periodontal Treatment",
-  "Other",
+  "Punte dentară",
+  "Proteză",
+  "Tratament parodontal",
+  "Altele",
 ];
 
 const ChartRecordForm = ({
