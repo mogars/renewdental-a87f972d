@@ -147,15 +147,20 @@ const DatabaseConnectionSettings = () => {
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="api-url">API URL (Express Server)</Label>
+              <Label htmlFor="api-url">Adresa Bază de Date MySQL (IP/Host)</Label>
               <Input
                 id="api-url"
-                value={config.awsApiUrl}
-                onChange={(e) => setConfig(prev => ({ ...prev, awsApiUrl: e.target.value }))}
-                placeholder="http://localhost:3001"
+                value={config.awsApiUrl.replace('http://', '').split(':')[0]}
+                onChange={(e) => {
+                  const host = e.target.value.trim();
+                  // Automatically format as full API URL internally
+                  const formatted = host.includes(':') ? `http://${host}` : `http://${host}:3001`;
+                  setConfig(prev => ({ ...prev, awsApiUrl: formatted, mysqlHost: host }));
+                }}
+                placeholder="Ex: 63.180.248.80"
               />
               <p className="text-xs text-muted-foreground">
-                Adresa serverului Express care se conectează la MySQL
+                Introdu adresa IP a serverului unde este găzduită baza de date.
               </p>
             </div>
 
