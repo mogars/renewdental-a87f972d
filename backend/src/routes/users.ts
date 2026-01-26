@@ -18,11 +18,11 @@ router.get('/profiles', async (req: Request, res: Response) => {
 // Get profile by user_id
 router.get('/:userId/profile', async (req: Request, res: Response) => {
   try {
-    const profile = await query(
+    const profile = await queryOne(
       'SELECT * FROM profiles WHERE user_id = ?',
       [req.params.userId]
     );
-    res.json(profile);
+    res.json(profile || null);
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
@@ -30,20 +30,27 @@ router.get('/:userId/profile', async (req: Request, res: Response) => {
 });
 
 // Update profile
-router.put('/profile/:userId', async (req: Request, res: Response) => {
+router.put('/:userId/profile', async (req: Request, res: Response) => {
   try {
     const { display_name, phone } = req.body;
+    const { userId } = req.params;
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    const profile = await updateAndReturn(
-      'profiles',
-      `UPDATE profiles SET display_name = ?, phone = ?, updated_at = ?
-       WHERE user_id = ?`,
-      [display_name, phone, now, req.params.userId],
-      3 // user_id is at index 3
-    );
+    // Check if profile exists
+    const existing = await queryOne('SELECT id FROM profiles WHERE user_id = ?', [userId]);
 
-    if (!profile) {
+    let profile;
+    if (existing) {
+      profile = await updateAndReturn(
+        'profiles',
+        `UPDATE profiles SET display_name = ?, phone = ?, updated_at = ?
+         WHERE user_id = ?`,
+        [display_name, phone, now, userId],
+        3 // user_id is at index 3
+      );
+    } else {
+      // Create profile if it doesn't exist (e.g. for a new user with a role)
+      // We need an email though. For now let's assume it should exist.
       res.status(404).json({ error: 'Profile not found' });
       return;
     }
@@ -71,17 +78,32 @@ router.get('/roles', async (req: Request, res: Response) => {
   }
 });
 
-// Add role to user
-router.post('/roles', async (req: Request, res: Response) => {
+// Get roles for specific user
+router.get('/:userId/roles', async (req: Request, res: Response) => {
   try {
-    const { user_id, role } = req.body;
+    const roles = await query(
+      'SELECT * FROM user_roles WHERE user_id = ?',
+      [req.params.userId]
+    );
+    res.json(roles);
+  } catch (error) {
+    console.error('Error fetching user roles:', error);
+    res.status(500).json({ error: 'Failed to fetch user roles' });
+  }
+});
+
+// Add role to user
+router.post('/:userId/roles', async (req: Request, res: Response) => {
+  try {
+    const { role } = req.body;
+    const { userId } = req.params;
     const id = uuidv4();
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     // Check if role already exists
     const existing = await queryOne(
       'SELECT id FROM user_roles WHERE user_id = ? AND role = ?',
-      [user_id, role]
+      [userId, role]
     );
 
     if (existing) {
@@ -93,7 +115,7 @@ router.post('/roles', async (req: Request, res: Response) => {
       'user_roles',
       `INSERT INTO user_roles (id, user_id, role, created_at)
        VALUES (?, ?, ?, ?)`,
-      [id, user_id, role, now]
+      [id, userId, role, now]
     );
 
     res.status(201).json(userRole);
@@ -103,17 +125,11 @@ router.post('/roles', async (req: Request, res: Response) => {
   }
 });
 
-// Remove role from user
-router.delete('/roles/:id', async (req: Request, res: Response) => {
+// Remove specific role from user
+router.delete('/:userId/roles/:role', async (req: Request, res: Response) => {
   try {
-    const existing = await queryOne('SELECT id FROM user_roles WHERE id = ?', [req.params.id]);
-    
-    if (!existing) {
-      res.status(404).json({ error: 'Role not found' });
-      return;
-    }
-
-    await query('DELETE FROM user_roles WHERE id = ?', [req.params.id]);
+    const { userId, role } = req.params;
+    await query('DELETE FROM user_roles WHERE user_id = ? AND role = ?', [userId, role]);
     res.json({ success: true });
   } catch (error) {
     console.error('Error removing role:', error);
