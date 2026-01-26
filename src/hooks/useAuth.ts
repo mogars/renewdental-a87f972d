@@ -1,53 +1,78 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import type { User, Session } from '@supabase/supabase-js';
+import { useEffect, useState, useCallback } from 'react';
+import * as cognito from '@/lib/cognito';
+
+export interface AuthUser {
+  id: string;
+  email: string;
+}
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Set up auth state listener FIRST (before getSession)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Then get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+  const checkAuth = useCallback(() => {
+    const cognitoUser = cognito.getCurrentUser();
+    if (cognitoUser && cognito.isAuthenticated()) {
+      setUser({
+        id: cognitoUser.sub,
+        email: cognitoUser.email,
+      });
+    } else {
+      setUser(null);
+    }
+    setLoading(false);
   }, []);
 
+  useEffect(() => {
+    checkAuth();
+    
+    // Check auth state periodically (tokens might expire)
+    const interval = setInterval(checkAuth, 60000);
+    return () => clearInterval(interval);
+  }, [checkAuth]);
+
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { data, error };
+    const result = await cognito.signIn(email, password);
+    if (result.success) {
+      checkAuth();
+      return { data: { user: cognito.getCurrentUser() }, error: null };
+    }
+    return { data: null, error: { message: result.error || 'Sign in failed' } };
   };
 
   const signUp = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    });
-    return { data, error };
+    const result = await cognito.signUp(email, password);
+    if (result.success) {
+      return { 
+        data: { userConfirmed: result.userConfirmed }, 
+        error: null 
+      };
+    }
+    return { data: null, error: { message: result.error || 'Sign up failed' } };
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    await cognito.signOut();
+    setUser(null);
+    return { error: null };
   };
 
-  return { user, session, loading, signIn, signUp, signOut };
+  const confirmSignUp = async (email: string, code: string) => {
+    const result = await cognito.confirmSignUp(email, code);
+    if (result.success) {
+      return { data: true, error: null };
+    }
+    return { data: null, error: { message: result.error || 'Confirmation failed' } };
+  };
+
+  return { 
+    user, 
+    session: user ? { user } : null, 
+    loading, 
+    signIn, 
+    signUp, 
+    signOut,
+    confirmSignUp,
+    refreshAuth: checkAuth,
+  };
 };

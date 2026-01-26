@@ -37,7 +37,7 @@ export type PatientFormData = z.infer<typeof patientSchema>;
 interface PatientFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: PatientFormData) => Promise<void>;
+  onSubmit: (data: PatientFormData) => Promise<unknown>;
   defaultValues?: Partial<PatientFormData>;
   isEditing?: boolean;
   isLoading?: boolean;

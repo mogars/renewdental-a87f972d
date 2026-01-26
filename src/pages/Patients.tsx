@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet, apiPost } from "@/services/api";
 import Header from "@/components/Header";
 import PatientCard from "@/components/PatientCard";
 import PatientForm, { PatientFormData } from "@/components/PatientForm";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { Patient } from "@/types/database";
 
 const Patients = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -18,20 +19,13 @@ const Patients = () => {
   const { data: patients, isLoading } = useQuery({
     queryKey: ["patients"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patients")
-        .select("*")
-        .order("last_name", { ascending: true })
-        .order("first_name", { ascending: true });
-
-      if (error) throw error;
-      return data;
+      return apiGet<Patient[]>("/patients");
     },
   });
 
   const createPatient = useMutation({
     mutationFn: async (data: PatientFormData) => {
-      const { error } = await supabase.from("patients").insert({
+      return apiPost<Patient>("/patients", {
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email || null,
@@ -42,8 +36,6 @@ const Patients = () => {
         insurance_id: data.insurance_id || null,
         notes: data.notes || null,
       });
-
-      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patients"] });

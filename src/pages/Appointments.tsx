@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet } from "@/services/api";
 import Header from "@/components/Header";
 import { AppointmentCalendar } from "@/components/appointments/AppointmentCalendar";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import type { AppointmentWithPatient, Patient } from "@/types/database";
 
 const Appointments = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -16,35 +17,14 @@ const Appointments = () => {
   const { data: appointments, isLoading: appointmentsLoading } = useQuery({
     queryKey: ["appointments"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select(`
-          *,
-          patients (
-            id,
-            first_name,
-            last_name,
-            phone,
-            email
-          )
-        `)
-        .order("appointment_date", { ascending: true });
-
-      if (error) throw error;
-      return data;
+      return apiGet<AppointmentWithPatient[]>("/appointments");
     },
   });
 
   const { data: patients } = useQuery({
     queryKey: ["patients"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patients")
-        .select("*")
-        .order("last_name", { ascending: true });
-
-      if (error) throw error;
-      return data;
+      return apiGet<Patient[]>("/patients");
     },
   });
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet } from "@/services/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,20 +10,9 @@ import { ChevronLeft, ChevronRight, Plus, Calendar, List, LayoutGrid, Users, Ste
 import { cn } from "@/lib/utils";
 import { DailyAgenda } from "./DailyAgenda";
 import { WeeklyView } from "./WeeklyView";
-import { Tables } from "@/integrations/supabase/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCalendarSettings } from "@/hooks/useCalendarSettings";
-
-type Doctor = Tables<"doctors">;
-type AppointmentWithPatient = Tables<"appointments"> & {
-  patients: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    phone: string | null;
-    email: string | null;
-  } | null;
-};
+import type { AppointmentWithPatient, Doctor } from "@/types/database";
 
 interface AppointmentCalendarProps {
   appointments: AppointmentWithPatient[];
@@ -49,7 +38,6 @@ export const AppointmentCalendar = ({
   // Apply default view from settings once loaded
   useEffect(() => {
     if (calendarSettings && !hasInitializedView) {
-      // Only override if not on mobile (mobile always uses day view)
       if (!isMobile) {
         setView(calendarSettings.defaultView);
       }
@@ -68,12 +56,7 @@ export const AppointmentCalendar = ({
   const { data: doctors } = useQuery({
     queryKey: ["doctors"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("doctors")
-        .select("*")
-        .order("last_name", { ascending: true });
-      if (error) throw error;
-      return data as Doctor[];
+      return apiGet<Doctor[]>("/doctors");
     },
   });
 
@@ -126,13 +109,6 @@ export const AppointmentCalendar = ({
   const goToToday = () => {
     setCurrentDate(new Date());
   };
-
-  // Get current doctor name for display
-  const currentDoctorName = selectedDoctorId === "all"
-    ? "All Doctors"
-    : doctors?.find((d) => d.id === selectedDoctorId)
-      ? `Dr. ${doctors.find((d) => d.id === selectedDoctorId)!.first_name} ${doctors.find((d) => d.id === selectedDoctorId)!.last_name}`
-      : "Select Doctor";
 
   return (
     <Card className="shadow-card">

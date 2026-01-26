@@ -1,23 +1,14 @@
 import { useState } from "react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Clock, User, Phone, Mail, FileText, MessageSquare, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Tables } from "@/integrations/supabase/types";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
-type AppointmentWithPatient = Tables<"appointments"> & {
-  patients: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    phone: string | null;
-    email: string | null;
-  } | null;
-};
+import { getAccessToken } from "@/lib/cognito";
+import { config } from "@/config/api";
+import type { AppointmentWithPatient } from "@/types/database";
 
 interface DailyAgendaProps {
   date: Date;
@@ -44,8 +35,8 @@ export const DailyAgenda = ({
     setSendingSmsFor(appointmentId);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const token = getAccessToken();
+      if (!token) {
         toast({
           title: "Not authenticated",
           description: "Please log in to send SMS reminders.",
@@ -54,13 +45,14 @@ export const DailyAgenda = ({
         return;
       }
 
+      // For AWS backend, call the Lambda function endpoint
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-immediate-sms`,
+        `${config.awsApiUrl}/send-sms`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionData.session.access_token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ appointmentId }),
         }
