@@ -15,10 +15,6 @@ const Header = () => {
     { href: "/settings", label: "Settings" },
   ];
 
-  if (isAdmin) {
-    navItems.push({ href: "/user-management", label: "Users" });
-  }
-
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between">
