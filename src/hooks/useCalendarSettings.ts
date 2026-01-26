@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/services/api";
+import type { AppSetting } from "@/types/database";
 
 export interface CalendarSettings {
   firstDayOfWeek: 0 | 1;
@@ -21,16 +22,21 @@ const DEFAULT_SETTINGS: CalendarSettings = {
   colorByTreatment: false,
 };
 
-interface SettingResponse {
-  value: string;
-}
+const STORAGE_KEY = "calendar_display_settings";
 
 export const useCalendarSettings = () => {
   return useQuery({
     queryKey: ["calendar-display-settings"],
     queryFn: async () => {
       try {
-        const data = await apiGet<SettingResponse[]>("/app-settings/calendar_display");
+        // Try to get from localStorage first
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } as CalendarSettings;
+        }
+        
+        // Fallback to API if localStorage is empty
+        const data = await apiGet<AppSetting[]>("/app-settings/calendar_display");
         
         if (data && data.length > 0 && data[0].value) {
           try {

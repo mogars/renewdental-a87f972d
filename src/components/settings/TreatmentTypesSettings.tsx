@@ -1,15 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Pencil, Trash2, Clock, Check, X } from "lucide-react";
-import { Tables } from "@/integrations/supabase/types";
-
-type TreatmentType = Tables<"treatment_types">;
+import type { TreatmentType } from "@/types/database";
 
 const TreatmentTypesSettings = () => {
   const { toast } = useToast();
@@ -24,21 +21,13 @@ const TreatmentTypesSettings = () => {
   const { data: treatmentTypes, isLoading } = useQuery({
     queryKey: ["treatmentTypes"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("treatment_types")
-        .select("*")
-        .order("name");
-      if (error) throw error;
-      return data as TreatmentType[];
+      return apiGet<TreatmentType[]>("/treatment-types");
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async ({ name, duration }: { name: string; duration: number }) => {
-      const { error } = await supabase
-        .from("treatment_types")
-        .insert({ name, duration_minutes: duration });
-      if (error) throw error;
+      return apiPost<TreatmentType>("/treatment-types", { name, duration_minutes: duration });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["treatmentTypes"] });
@@ -55,11 +44,7 @@ const TreatmentTypesSettings = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, name, duration }: { id: string; name: string; duration: number }) => {
-      const { error } = await supabase
-        .from("treatment_types")
-        .update({ name, duration_minutes: duration })
-        .eq("id", id);
-      if (error) throw error;
+      return apiPut<TreatmentType>(`/treatment-types/${id}`, { name, duration_minutes: duration });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["treatmentTypes"] });
@@ -74,11 +59,7 @@ const TreatmentTypesSettings = () => {
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const { error } = await supabase
-        .from("treatment_types")
-        .update({ is_active: isActive })
-        .eq("id", id);
-      if (error) throw error;
+      return apiPut<TreatmentType>(`/treatment-types/${id}`, { is_active: isActive });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["treatmentTypes"] });
@@ -91,11 +72,7 @@ const TreatmentTypesSettings = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("treatment_types")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
+      return apiDelete(`/treatment-types/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["treatmentTypes"] });

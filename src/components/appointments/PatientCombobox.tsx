@@ -16,13 +16,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Tables } from "@/integrations/supabase/types";
 import PatientForm, { PatientFormData } from "@/components/PatientForm";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiPost } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
-
-type Patient = Tables<"patients">;
+import type { Patient } from "@/types/database";
 
 interface PatientComboboxProps {
   patients: Patient[];
@@ -44,24 +42,17 @@ export const PatientCombobox = ({
 
   const createPatient = useMutation({
     mutationFn: async (data: PatientFormData) => {
-      const { data: newPatient, error } = await supabase
-        .from("patients")
-        .insert({
-          first_name: data.first_name,
-          last_name: data.last_name,
-          email: data.email || null,
-          phone: data.phone || null,
-          date_of_birth: data.date_of_birth || null,
-          address: data.address || null,
-          insurance_provider: data.insurance_provider || null,
-          insurance_id: data.insurance_id || null,
-          notes: data.notes || null,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return newPatient;
+      return apiPost<Patient>("/patients", {
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email || null,
+        phone: data.phone || null,
+        date_of_birth: data.date_of_birth || null,
+        address: data.address || null,
+        insurance_provider: data.insurance_provider || null,
+        insurance_id: data.insurance_id || null,
+        notes: data.notes || null,
+      });
     },
     onSuccess: (newPatient) => {
       queryClient.invalidateQueries({ queryKey: ["patients"] });

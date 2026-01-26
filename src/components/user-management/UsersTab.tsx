@@ -1,14 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet } from "@/services/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Users } from "lucide-react";
 import { UserCard } from "./UserCard";
 import { CreateUserForm } from "./CreateUserForm";
 import { DoctorsSettings } from "@/components/settings/DoctorsSettings";
-import type { Database } from "@/integrations/supabase/types";
-
-type AppRole = Database["public"]["Enums"]["app_role"];
+import type { AppRole, Profile, UserRole } from "@/types/database";
 
 export interface UserWithRoles {
   id: string;
@@ -30,23 +28,19 @@ export const UsersTab = () => {
   const { data: users, isLoading, error } = useQuery({
     queryKey: ["usersWithRoles"],
     queryFn: async () => {
-      // Fetch roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
-
-      if (rolesError) throw rolesError;
-
-      // Fetch profiles for email addresses, display names, and phone
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("user_id, email, display_name, phone");
-
-      if (profilesError) throw profilesError;
+      // Fetch roles and profiles from Express API
+      const [rolesData, profilesData] = await Promise.all([
+        apiGet<UserRole[]>("/users/roles"),
+        apiGet<Profile[]>("/users/profiles"),
+      ]);
 
       // Create profile lookup map
-      const profileByUser = profilesData.reduce((acc, { user_id, email, display_name, phone }) => {
-        acc[user_id] = { email, displayName: display_name, phone };
+      const profileByUser = profilesData.reduce((acc, profile) => {
+        acc[profile.user_id] = { 
+          email: profile.email, 
+          displayName: profile.display_name, 
+          phone: profile.phone 
+        };
         return acc;
       }, {} as Record<string, { email: string; displayName: string | null; phone: string | null }>);
 

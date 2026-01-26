@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,73 +14,44 @@ interface ClinicInfo {
   website: string;
 }
 
+const DEFAULT_INFO: ClinicInfo = {
+  name: "",
+  address: "",
+  phone: "",
+  email: "",
+  website: "",
+};
+
+const STORAGE_KEY = "clinic_info_settings";
+
 export const ClinicInfoSettings = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<ClinicInfo>({
-    name: "",
-    address: "",
-    phone: "",
-    email: "",
-    website: "",
-  });
-
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ["clinic-info-settings"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("key, value")
-        .in("key", ["clinic_name", "clinic_address", "clinic_phone", "clinic_email", "clinic_website"]);
-      
-      if (error) throw error;
-      
-      const settingsMap: Record<string, string> = {};
-      data?.forEach(s => {
-        settingsMap[s.key] = s.value;
-      });
-      
-      return {
-        name: settingsMap.clinic_name || "",
-        address: settingsMap.clinic_address || "",
-        phone: settingsMap.clinic_phone || "",
-        email: settingsMap.clinic_email || "",
-        website: settingsMap.clinic_website || "",
-      };
-    },
-  });
+  const [formData, setFormData] = useState<ClinicInfo>(DEFAULT_INFO);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (settings) {
-      setFormData(settings);
-    }
-  }, [settings]);
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const updates = [
-        { key: "clinic_name", value: formData.name, description: "Clinic name" },
-        { key: "clinic_address", value: formData.address, description: "Clinic address" },
-        { key: "clinic_phone", value: formData.phone, description: "Clinic phone number" },
-        { key: "clinic_email", value: formData.email, description: "Clinic email" },
-        { key: "clinic_website", value: formData.website, description: "Clinic website" },
-      ];
-
-      for (const update of updates) {
-        const { error } = await supabase
-          .from("app_settings")
-          .upsert(update, { onConflict: "key" });
-        if (error) throw error;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setFormData({ ...DEFAULT_INFO, ...JSON.parse(stored) });
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clinic-info-settings"] });
+    } catch (e) {
+      console.error("Failed to load clinic info:", e);
+    }
+    setIsLoading(false);
+  }, []);
+
+  const handleSave = () => {
+    setIsSaving(true);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
       toast({ title: "Saved", description: "Clinic information updated successfully." });
-    },
-    onError: () => {
+    } catch (e) {
       toast({ title: "Error", description: "Failed to save clinic information.", variant: "destructive" });
-    },
-  });
+    }
+    setIsSaving(false);
+  };
 
   if (isLoading) {
     return (
@@ -148,11 +117,11 @@ export const ClinicInfoSettings = () => {
       </div>
 
       <Button 
-        onClick={() => saveMutation.mutate()} 
-        disabled={saveMutation.isPending}
+        onClick={handleSave} 
+        disabled={isSaving}
         className="w-full"
       >
-        {saveMutation.isPending ? (
+        {isSaving ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <Save className="mr-2 h-4 w-4" />

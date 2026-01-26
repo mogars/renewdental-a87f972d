@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiDelete, apiPost } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -13,9 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Pencil } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
-
-type AppRole = Database["public"]["Enums"]["app_role"];
+import type { AppRole } from "@/types/database";
 
 interface UserRoleEditorProps {
   userId: string;
@@ -51,20 +49,12 @@ export const UserRoleEditor = ({ userId, userEmail, currentRoles }: UserRoleEdit
 
       // Remove roles
       for (const role of rolesToRemove) {
-        const { error } = await supabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", userId)
-          .eq("role", role);
-        if (error) throw error;
+        await apiDelete(`/users/${userId}/roles/${role}`);
       }
 
       // Add roles
       for (const role of rolesToAdd) {
-        const { error } = await supabase
-          .from("user_roles")
-          .insert({ user_id: userId, role });
-        if (error) throw error;
+        await apiPost(`/users/${userId}/roles`, { role });
       }
 
       queryClient.invalidateQueries({ queryKey: ["usersWithRoles"] });

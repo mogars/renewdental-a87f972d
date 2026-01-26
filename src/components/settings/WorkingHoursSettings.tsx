@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,59 +42,36 @@ const DEFAULT_HOURS: WorkingHours = {
   sunday: { enabled: false, start: "09:00", end: "14:00" },
 };
 
+const STORAGE_KEY = "working_hours_settings";
+
 export const WorkingHoursSettings = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [hours, setHours] = useState<WorkingHours>(DEFAULT_HOURS);
-
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ["working-hours-settings"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "working_hours")
-        .maybeSingle();
-      
-      if (error) throw error;
-      
-      if (data?.value) {
-        try {
-          return JSON.parse(data.value) as WorkingHours;
-        } catch {
-          return DEFAULT_HOURS;
-        }
-      }
-      return DEFAULT_HOURS;
-    },
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (settings) {
-      setHours(settings);
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setHours(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Failed to load working hours:", e);
     }
-  }, [settings]);
+    setIsLoading(false);
+  }, []);
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("app_settings")
-        .upsert({
-          key: "working_hours",
-          value: JSON.stringify(hours),
-          description: "Clinic working hours schedule",
-        }, { onConflict: "key" });
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["working-hours-settings"] });
+  const handleSave = () => {
+    setIsSaving(true);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(hours));
       toast({ title: "Salvat", description: "Programul de lucru a fost actualizat." });
-    },
-    onError: () => {
+    } catch (e) {
       toast({ title: "Eroare", description: "Nu s-a putut salva programul.", variant: "destructive" });
-    },
-  });
+    }
+    setIsSaving(false);
+  };
 
   const updateDay = (day: keyof WorkingHours, field: keyof DaySchedule, value: boolean | string) => {
     setHours(prev => ({
@@ -150,11 +125,11 @@ export const WorkingHoursSettings = () => {
       </div>
 
       <Button 
-        onClick={() => saveMutation.mutate()} 
-        disabled={saveMutation.isPending}
+        onClick={handleSave} 
+        disabled={isSaving}
         className="w-full"
       >
-        {saveMutation.isPending ? (
+        {isSaving ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <Save className="mr-2 h-4 w-4" />

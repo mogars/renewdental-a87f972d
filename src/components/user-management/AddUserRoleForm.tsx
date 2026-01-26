@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiPost } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
-
-type AppRole = Database["public"]["Enums"]["app_role"];
+import type { AppRole } from "@/types/database";
 
 const AVAILABLE_ROLES: { value: AppRole; label: string }[] = [
   { value: "admin", label: "Admin" },
@@ -30,11 +28,7 @@ export const AddUserRoleForm = ({ onSuccess }: AddUserRoleFormProps) => {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase
-        .from("user_roles")
-        .insert({ user_id: userId.trim(), role: selectedRole });
-
-      if (error) throw error;
+      await apiPost(`/users/${userId.trim()}/roles`, { role: selectedRole });
 
       toast({
         title: "Role assigned",

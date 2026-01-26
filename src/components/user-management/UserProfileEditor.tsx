@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiPut, apiGet, apiPost, apiDelete } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserCog } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
-
-type AppRole = Database["public"]["Enums"]["app_role"];
+import type { AppRole, UserRole } from "@/types/database";
 
 const AVAILABLE_ROLES: { value: AppRole; label: string }[] = [
   { value: "admin", label: "Admin" },
@@ -69,46 +67,25 @@ export const UserProfileEditor = ({
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
       // Update profile
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ 
-          display_name: data.displayName.trim() || null,
-          phone: data.phone.trim() || null,
-        })
-        .eq("user_id", userId);
-
-      if (profileError) throw profileError;
+      await apiPut(`/users/${userId}/profile`, { 
+        display_name: data.displayName.trim() || null,
+        phone: data.phone.trim() || null,
+      });
 
       // Get current roles to determine what to add/remove
-      const { data: existingRoles, error: rolesQueryError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
-
-      if (rolesQueryError) throw rolesQueryError;
-
+      const existingRoles = await apiGet<UserRole[]>(`/users/${userId}/roles`);
       const existingRoleValues = existingRoles?.map(r => r.role) || [];
       const rolesToAdd = data.roles.filter(r => !existingRoleValues.includes(r));
       const rolesToRemove = existingRoleValues.filter(r => !data.roles.includes(r));
 
       // Remove roles
-      if (rolesToRemove.length > 0) {
-        const { error: removeError } = await supabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", userId)
-          .in("role", rolesToRemove);
-
-        if (removeError) throw removeError;
+      for (const role of rolesToRemove) {
+        await apiDelete(`/users/${userId}/roles/${role}`);
       }
 
       // Add new roles
-      if (rolesToAdd.length > 0) {
-        const { error: addError } = await supabase
-          .from("user_roles")
-          .insert(rolesToAdd.map(role => ({ user_id: userId, role })));
-
-        if (addError) throw addError;
+      for (const role of rolesToAdd) {
+        await apiPost(`/users/${userId}/roles`, { role });
       }
     },
     onSuccess: () => {

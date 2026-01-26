@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,59 +27,36 @@ const DEFAULT_SETTINGS: CalendarSettings = {
   colorByTreatment: false,
 };
 
+const STORAGE_KEY = "calendar_display_settings";
+
 export const CalendarDisplaySettings = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [settings, setSettings] = useState<CalendarSettings>(DEFAULT_SETTINGS);
-
-  const { data: savedSettings, isLoading } = useQuery({
-    queryKey: ["calendar-display-settings"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "calendar_display")
-        .maybeSingle();
-      
-      if (error) throw error;
-      
-      if (data?.value) {
-        try {
-          return { ...DEFAULT_SETTINGS, ...JSON.parse(data.value) } as CalendarSettings;
-        } catch {
-          return DEFAULT_SETTINGS;
-        }
-      }
-      return DEFAULT_SETTINGS;
-    },
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (savedSettings) {
-      setSettings(savedSettings);
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
+      }
+    } catch (e) {
+      console.error("Failed to load calendar settings:", e);
     }
-  }, [savedSettings]);
+    setIsLoading(false);
+  }, []);
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("app_settings")
-        .upsert({
-          key: "calendar_display",
-          value: JSON.stringify(settings),
-          description: "Calendar display preferences",
-        }, { onConflict: "key" });
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["calendar-display-settings"] });
+  const handleSave = () => {
+    setIsSaving(true);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
       toast({ title: "Salvat", description: "Setările calendarului au fost actualizate." });
-    },
-    onError: () => {
+    } catch (e) {
       toast({ title: "Eroare", description: "Nu s-au putut salva setările.", variant: "destructive" });
-    },
-  });
+    }
+    setIsSaving(false);
+  };
 
   if (isLoading) {
     return (
@@ -197,11 +172,11 @@ export const CalendarDisplaySettings = () => {
       </div>
 
       <Button 
-        onClick={() => saveMutation.mutate()} 
-        disabled={saveMutation.isPending}
+        onClick={handleSave} 
+        disabled={isSaving}
         className="w-full"
       >
-        {saveMutation.isPending ? (
+        {isSaving ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <Save className="mr-2 h-4 w-4" />
