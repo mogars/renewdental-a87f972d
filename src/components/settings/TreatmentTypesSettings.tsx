@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -132,137 +131,124 @@ const TreatmentTypesSettings = () => {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Tipuri de Tratament
-        </CardTitle>
-        <CardDescription>
-          Configurează tipurile de tratament și duratele lor implicite. Durata va fi folosită pentru calculul automat al orei de încheiere la programări.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Add new treatment type */}
-        {isAdding ? (
-          <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
-            <div className="flex-1">
-              <Input
-                placeholder="Nume tratament"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-              />
-            </div>
-            <div className="w-24">
-              <Input
-                type="number"
-                placeholder="Min"
-                value={newDuration}
-                onChange={(e) => setNewDuration(e.target.value)}
-                min={5}
-                max={480}
-              />
-            </div>
-            <span className="text-sm text-muted-foreground">min</span>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleAdd}
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            </Button>
-            <Button size="icon" variant="ghost" onClick={() => setIsAdding(false)}>
-              <X className="h-4 w-4" />
-            </Button>
+    <div className="space-y-4">
+      {/* Add new treatment type */}
+      {isAdding ? (
+        <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+          <div className="flex-1">
+            <Input
+              placeholder="Nume tratament"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
           </div>
-        ) : (
-          <Button variant="outline" onClick={() => setIsAdding(true)} className="w-full">
-            <Plus className="h-4 w-4 mr-2" />
-            Adaugă tip de tratament
+          <div className="w-24">
+            <Input
+              type="number"
+              placeholder="Min"
+              value={newDuration}
+              onChange={(e) => setNewDuration(e.target.value)}
+              min={5}
+              max={480}
+            />
+          </div>
+          <span className="text-sm text-muted-foreground">min</span>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleAdd}
+            disabled={createMutation.isPending}
+          >
+            {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
           </Button>
-        )}
-
-        {/* List of treatment types */}
-        <div className="space-y-2">
-          {treatmentTypes?.map((type) => (
-            <div
-              key={type.id}
-              className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-            >
-              {editingId === type.id ? (
-                <>
-                  <div className="flex-1">
-                    <Input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                    />
-                  </div>
-                  <div className="w-24">
-                    <Input
-                      type="number"
-                      value={editDuration}
-                      onChange={(e) => setEditDuration(e.target.value)}
-                      min={5}
-                      max={480}
-                    />
-                  </div>
-                  <span className="text-sm text-muted-foreground">min</span>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={saveEdit}
-                    disabled={updateMutation.isPending}
-                  >
-                    {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={cancelEditing}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="flex-1">
-                    <span className={type.is_active ? "" : "text-muted-foreground line-through"}>
-                      {type.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{type.duration_minutes} min</span>
-                  </div>
-                  <Switch
-                    checked={type.is_active}
-                    onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: type.id, isActive: checked })}
-                  />
-                  <Button size="icon" variant="ghost" onClick={() => startEditing(type)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-muted-foreground hover:text-destructive"
-                    onClick={() => deleteMutation.mutate(type.id)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
-            </div>
-          ))}
+          <Button size="icon" variant="ghost" onClick={() => setIsAdding(false)}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+      ) : (
+        <Button variant="outline" onClick={() => setIsAdding(true)} className="w-full">
+          <Plus className="h-4 w-4 mr-2" />
+          Adaugă tip de tratament
+        </Button>
+      )}
+
+      {/* List of treatment types */}
+      <div className="space-y-2">
+        {treatmentTypes?.map((type) => (
+          <div
+            key={type.id}
+            className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+          >
+            {editingId === type.id ? (
+              <>
+                <div className="flex-1">
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                  />
+                </div>
+                <div className="w-24">
+                  <Input
+                    type="number"
+                    value={editDuration}
+                    onChange={(e) => setEditDuration(e.target.value)}
+                    min={5}
+                    max={480}
+                  />
+                </div>
+                <span className="text-sm text-muted-foreground">min</span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={saveEdit}
+                  disabled={updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                </Button>
+                <Button size="icon" variant="ghost" onClick={cancelEditing}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="flex-1">
+                  <span className={type.is_active ? "" : "text-muted-foreground line-through"}>
+                    {type.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{type.duration_minutes} min</span>
+                </div>
+                <Switch
+                  checked={type.is_active}
+                  onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: type.id, isActive: checked })}
+                />
+                <Button size="icon" variant="ghost" onClick={() => startEditing(type)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => deleteMutation.mutate(type.id)}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };
 
