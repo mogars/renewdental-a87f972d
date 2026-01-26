@@ -203,10 +203,7 @@ const ChartRecordsTable = ({
                   <TableCell className="border-r border-border">
                     <div className="flex flex-col gap-1 text-sm">
                       {record.dentist_name && (
-                        <span>
-                          <span className="text-muted-foreground">Dr: </span>
-                          {record.dentist_name}
-                        </span>
+                        <span>{record.dentist_name}</span>
                       )}
                       {record.description && (
                         <span className="text-muted-foreground line-clamp-2">
