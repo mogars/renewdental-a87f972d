@@ -27,11 +27,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-            setUser(JSON.parse(savedUser));
+        try {
+            const savedUser = localStorage.getItem('user');
+            if (savedUser) {
+                const parsed = JSON.parse(savedUser);
+                if (parsed && typeof parsed === 'object' && parsed.id) {
+                    setUser(parsed);
+                } else {
+                    localStorage.removeItem('user');
+                }
+            }
+        } catch (error) {
+            console.error('Failed to parse saved user:', error);
+            localStorage.removeItem('user');
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     }, []);
 
     const login = async (email: string, password: string) => {
