@@ -169,24 +169,24 @@ const Settings = () => {
           <p className="mt-1 text-muted-foreground">Manage your clinic's configuration and users</p>
         </div>
 
-        <Tabs defaultValue="doctors" className="space-y-6">
+        <Tabs defaultValue={isAdmin ? "general" : "doctors"} className="space-y-6">
           <TabsList>
-            <TabsTrigger value="doctors" className="flex items-center gap-2">
-              <Stethoscope className="h-4 w-4" />
-              Doctors
-            </TabsTrigger>
             {isAdmin && (
               <>
-                <TabsTrigger value="users" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Users
-                </TabsTrigger>
                 <TabsTrigger value="general" className="flex items-center gap-2">
                   <Settings2 className="h-4 w-4" />
                   General
                 </TabsTrigger>
+                <TabsTrigger value="users" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Users
+                </TabsTrigger>
               </>
             )}
+            <TabsTrigger value="doctors" className="flex items-center gap-2">
+              <Stethoscope className="h-4 w-4" />
+              Doctors
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="doctors">
