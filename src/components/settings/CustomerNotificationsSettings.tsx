@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -37,62 +35,39 @@ const PLACEHOLDERS = [
   { key: "{appointment_time}", description: "Ora programării (HH:MM)" },
 ];
 
+const STORAGE_KEY = "sms_reminder_config";
+
 export function CustomerNotificationsSettings() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [config, setConfig] = useState<ReminderConfig>(DEFAULT_CONFIG);
   const [isDirty, setIsDirty] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [activeTemplate, setActiveTemplate] = useState<"24h" | "2h" | "1h">("24h");
 
-  const { data: savedConfig, isLoading } = useQuery({
-    queryKey: ["sms-reminder-config"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "sms_reminder_config")
-        .maybeSingle();
-
-      if (error) throw error;
-      
-      if (data?.value) {
-        try {
-          return { ...DEFAULT_CONFIG, ...JSON.parse(data.value) } as ReminderConfig;
-        } catch {
-          return DEFAULT_CONFIG;
-        }
-      }
-      return DEFAULT_CONFIG;
-    },
-  });
-
   useEffect(() => {
-    if (savedConfig) {
-      setConfig(savedConfig);
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(stored) });
+      }
+    } catch (e) {
+      console.error("Failed to load reminder config:", e);
     }
-  }, [savedConfig]);
+    setIsLoading(false);
+  }, []);
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("app_settings")
-        .upsert({
-          key: "sms_reminder_config",
-          value: JSON.stringify(config),
-          description: "SMS reminder configuration",
-        }, { onConflict: "key" });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sms-reminder-config"] });
+  const handleSave = () => {
+    setIsSaving(true);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
       setIsDirty(false);
       toast({ title: "Salvat", description: "Configurația notificărilor a fost actualizată." });
-    },
-    onError: () => {
+    } catch (e) {
       toast({ title: "Eroare", description: "Nu s-a putut salva configurația.", variant: "destructive" });
-    },
-  });
+    }
+    setIsSaving(false);
+  };
 
   const updateConfig = <K extends keyof ReminderConfig>(key: K, value: ReminderConfig[K]) => {
     setConfig(prev => ({ ...prev, [key]: value }));
@@ -288,11 +263,11 @@ export function CustomerNotificationsSettings() {
       {/* Save Button */}
       <div className="flex gap-2">
         <Button
-          onClick={() => saveMutation.mutate()}
-          disabled={!isDirty || saveMutation.isPending}
+          onClick={handleSave}
+          disabled={!isDirty || isSaving}
           className="w-full"
         >
-          {saveMutation.isPending ? (
+          {isSaving ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <Save className="mr-2 h-4 w-4" />

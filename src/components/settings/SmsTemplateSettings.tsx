@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, MessageSquare, Save } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 
 const DEFAULT_TEMPLATE = "Hi {patient_name}! This is a reminder for your dental appointment on {appointment_date} at {appointment_time}. Please reply CONFIRM to confirm or call us to reschedule. - DentaCare";
 
@@ -16,58 +14,29 @@ const PLACEHOLDERS = [
   { key: "{appointment_time}", description: "Appointment time (HH:MM)" },
 ];
 
+const STORAGE_KEY = "sms_template";
+
 export function SmsTemplateSettings() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [template, setTemplate] = useState("");
+  const [savedTemplate, setSavedTemplate] = useState("");
   const [isDirty, setIsDirty] = useState(false);
-
-  const { data: savedTemplate, isLoading } = useQuery({
-    queryKey: ["app-settings", "sms_template"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "sms_template")
-        .maybeSingle();
-
-      if (error) throw error;
-      return data?.value || DEFAULT_TEMPLATE;
-    },
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (savedTemplate) {
-      setTemplate(savedTemplate);
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const value = stored || DEFAULT_TEMPLATE;
+      setTemplate(value);
+      setSavedTemplate(value);
+    } catch (e) {
+      console.error("Failed to load SMS template:", e);
+      setTemplate(DEFAULT_TEMPLATE);
+      setSavedTemplate(DEFAULT_TEMPLATE);
     }
-  }, [savedTemplate]);
-
-  const updateTemplate = useMutation({
-    mutationFn: async (newTemplate: string) => {
-      const { error } = await supabase
-        .from("app_settings")
-        .update({ value: newTemplate })
-        .eq("key", "sms_template");
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["app-settings", "sms_template"] });
-      setIsDirty(false);
-      toast({
-        title: "Template saved",
-        description: "Your SMS template has been updated successfully.",
-      });
-    },
-    onError: (error) => {
-      console.error("Failed to update template:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save SMS template. Make sure you have admin permissions.",
-        variant: "destructive",
-      });
-    },
-  });
+    setIsLoading(false);
+  }, []);
 
   const handleTemplateChange = (value: string) => {
     setTemplate(value);
@@ -75,11 +44,27 @@ export function SmsTemplateSettings() {
   };
 
   const handleSave = () => {
-    updateTemplate.mutate(template);
+    setIsSaving(true);
+    try {
+      localStorage.setItem(STORAGE_KEY, template);
+      setSavedTemplate(template);
+      setIsDirty(false);
+      toast({
+        title: "Template saved",
+        description: "Your SMS template has been updated successfully.",
+      });
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: "Failed to save SMS template.",
+        variant: "destructive",
+      });
+    }
+    setIsSaving(false);
   };
 
   const handleReset = () => {
-    setTemplate(savedTemplate || DEFAULT_TEMPLATE);
+    setTemplate(savedTemplate);
     setIsDirty(false);
   };
 
@@ -144,9 +129,9 @@ export function SmsTemplateSettings() {
       <div className="flex gap-2 pt-2">
         <Button
           onClick={handleSave}
-          disabled={!isDirty || updateTemplate.isPending}
+          disabled={!isDirty || isSaving}
         >
-          {updateTemplate.isPending ? (
+          {isSaving ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <Save className="mr-2 h-4 w-4" />

@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Clock, User, Phone, Mail, FileText, MessageSquare, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { getAccessToken } from "@/lib/cognito";
 import { config } from "@/config/api";
 import type { AppointmentWithPatient } from "@/types/database";
 
@@ -35,24 +34,13 @@ export const DailyAgenda = ({
     setSendingSmsFor(appointmentId);
 
     try {
-      const token = getAccessToken();
-      if (!token) {
-        toast({
-          title: "Not authenticated",
-          description: "Please log in to send SMS reminders.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // For AWS backend, call the Lambda function endpoint
+      // Call the Express backend SMS endpoint
       const response = await fetch(
         `${config.awsApiUrl}/send-sms`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ appointmentId }),
         }

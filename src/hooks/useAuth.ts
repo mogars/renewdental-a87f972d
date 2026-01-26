@@ -1,78 +1,53 @@
-import { useEffect, useState, useCallback } from 'react';
-import * as cognito from '@/lib/cognito';
+// Simplified auth hook - no authentication required for local MySQL setup
 
 export interface AuthUser {
   id: string;
   email: string;
 }
 
+// Local admin user - always authenticated
+const LOCAL_ADMIN: AuthUser = {
+  id: 'local-admin',
+  email: 'admin@local',
+};
+
 export const useAuth = () => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  // For local MySQL setup, we're always "authenticated" as local admin
+  const user = LOCAL_ADMIN;
+  const loading = false;
 
-  const checkAuth = useCallback(() => {
-    const cognitoUser = cognito.getCurrentUser();
-    if (cognitoUser && cognito.isAuthenticated()) {
-      setUser({
-        id: cognitoUser.sub,
-        email: cognitoUser.email,
-      });
-    } else {
-      setUser(null);
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    checkAuth();
-    
-    // Check auth state periodically (tokens might expire)
-    const interval = setInterval(checkAuth, 60000);
-    return () => clearInterval(interval);
-  }, [checkAuth]);
-
-  const signIn = async (email: string, password: string) => {
-    const result = await cognito.signIn(email, password);
-    if (result.success) {
-      checkAuth();
-      return { data: { user: cognito.getCurrentUser() }, error: null };
-    }
-    return { data: null, error: { message: result.error || 'Sign in failed' } };
+  const signIn = async (_email: string, _password: string) => {
+    // No authentication needed for local setup
+    return { data: { user: LOCAL_ADMIN }, error: null };
   };
 
-  const signUp = async (email: string, password: string) => {
-    const result = await cognito.signUp(email, password);
-    if (result.success) {
-      return { 
-        data: { userConfirmed: result.userConfirmed }, 
-        error: null 
-      };
-    }
-    return { data: null, error: { message: result.error || 'Sign up failed' } };
+  const signUp = async (_email: string, _password: string) => {
+    // No authentication needed for local setup
+    return { data: { userConfirmed: true }, error: null };
   };
 
   const signOut = async () => {
-    await cognito.signOut();
-    setUser(null);
+    // No authentication needed for local setup
     return { error: null };
   };
 
-  const confirmSignUp = async (email: string, code: string) => {
-    const result = await cognito.confirmSignUp(email, code);
-    if (result.success) {
-      return { data: true, error: null };
-    }
-    return { data: null, error: { message: result.error || 'Confirmation failed' } };
+  const confirmSignUp = async (_email: string, _code: string) => {
+    // No authentication needed for local setup
+    return { data: true, error: null };
+  };
+
+  const refreshAuth = () => {
+    // No-op for local setup
   };
 
   return { 
     user, 
-    session: user ? { user } : null, 
+    session: { user }, 
     loading, 
     signIn, 
     signUp, 
     signOut,
     confirmSignUp,
-    refreshAuth: checkAuth,
+    refreshAuth,
   };
 };

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiPost } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,10 +12,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, UserPlus } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
-
-type AppRole = Database["public"]["Enums"]["app_role"];
+import { Loader2, UserPlus } from "lucide-react";
+import type { AppRole } from "@/types/database";
 
 const AVAILABLE_ROLES: { value: AppRole; label: string }[] = [
   { value: "staff", label: "Staff" },
@@ -61,23 +59,11 @@ export const CreateUserForm = ({ onSuccess }: CreateUserFormProps) => {
 
     setIsSubmitting(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      const response = await supabase.functions.invoke("create-user", {
-        body: {
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-        },
+      await apiPost("/users", {
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
       });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      if (response.data?.error) {
-        throw new Error(response.data.error);
-      }
 
       toast({
         title: "User created",

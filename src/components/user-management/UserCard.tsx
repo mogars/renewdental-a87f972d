@@ -1,9 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Phone, Users } from "lucide-react";
 import { UserProfileEditor } from "./UserProfileEditor";
-import type { Database } from "@/integrations/supabase/types";
-
-type AppRole = Database["public"]["Enums"]["app_role"];
+import type { AppRole } from "@/types/database";
 
 interface UserCardProps {
   user: {
