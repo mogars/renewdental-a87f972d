@@ -224,6 +224,13 @@ serve(async (req) => {
         results.push({ success, appointmentId: apt.id, type: "24h" });
       }
 
+      // Send 2-hour reminder (between 115 and 125 minutes before)
+      if (timeDiffHours >= 1.917 && timeDiffHours <= 2.083) {
+        const twoHourMessage = `Hi ${patientName}! Reminder: your dental appointment is in 2 hours at ${appointmentTime}. See you soon! - DentaCare`;
+        const success = await sendTextBeeSMS(normalizedPhone, twoHourMessage);
+        results.push({ success, appointmentId: apt.id, type: "2h" });
+      }
+
       // Send 1-hour reminder (between 55 and 65 minutes before)
       if (timeDiffHours >= 0.917 && timeDiffHours <= 1.083) {
         const hourMessage = `Hi ${patientName}! Just a reminder that your dental appointment is in 1 hour at ${appointmentTime}. We look forward to seeing you! - DentaCare`;
