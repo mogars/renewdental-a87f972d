@@ -1,12 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { query, queryOne } from '../config/database';
-import { authenticate } from '../middleware/auth';
+import { query, queryOne, insertAndReturn, updateAndReturn } from '../config/database';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
-
-// All routes require authentication
-router.use(authenticate);
 
 // Get all patients
 router.get('/', async (req: Request, res: Response) => {
@@ -25,7 +21,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const patient = await queryOne(
-      'SELECT * FROM patients WHERE id = $1',
+      'SELECT * FROM patients WHERE id = ?',
       [req.params.id]
     );
     
@@ -57,14 +53,14 @@ router.post('/', async (req: Request, res: Response) => {
     } = req.body;
 
     const id = uuidv4();
-    const now = new Date().toISOString();
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    const patient = await queryOne(
+    const patient = await insertAndReturn(
+      'patients',
       `INSERT INTO patients 
        (id, first_name, last_name, email, phone, date_of_birth, address, 
         insurance_provider, insurance_id, notes, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       RETURNING *`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, first_name, last_name, email, phone, date_of_birth, address,
        insurance_provider, insurance_id, notes, now, now]
     );
@@ -91,17 +87,18 @@ router.put('/:id', async (req: Request, res: Response) => {
       notes,
     } = req.body;
 
-    const now = new Date().toISOString();
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    const patient = await queryOne(
+    const patient = await updateAndReturn(
+      'patients',
       `UPDATE patients SET
-       first_name = $1, last_name = $2, email = $3, phone = $4,
-       date_of_birth = $5, address = $6, insurance_provider = $7,
-       insurance_id = $8, notes = $9, updated_at = $10
-       WHERE id = $11
-       RETURNING *`,
+       first_name = ?, last_name = ?, email = ?, phone = ?,
+       date_of_birth = ?, address = ?, insurance_provider = ?,
+       insurance_id = ?, notes = ?, updated_at = ?
+       WHERE id = ?`,
       [first_name, last_name, email, phone, date_of_birth, address,
-       insurance_provider, insurance_id, notes, now, req.params.id]
+       insurance_provider, insurance_id, notes, now, req.params.id],
+      10 // id is at index 10
     );
 
     if (!patient) {
@@ -119,16 +116,14 @@ router.put('/:id', async (req: Request, res: Response) => {
 // Delete patient
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const result = await query(
-      'DELETE FROM patients WHERE id = $1 RETURNING id',
-      [req.params.id]
-    );
-
-    if (result.length === 0) {
+    const existing = await queryOne('SELECT id FROM patients WHERE id = ?', [req.params.id]);
+    
+    if (!existing) {
       res.status(404).json({ error: 'Patient not found' });
       return;
     }
 
+    await query('DELETE FROM patients WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting patient:', error);
