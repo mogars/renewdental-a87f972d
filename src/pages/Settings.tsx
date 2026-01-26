@@ -8,14 +8,14 @@ import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { Users, Settings2, Bell, Clock, MessageSquare, Building2, CalendarClock, Calendar } from "lucide-react";
+import { Users, Settings2, Bell, Clock, Building2, CalendarClock, Calendar, MessageCircle } from "lucide-react";
 import { UsersTab } from "@/components/user-management/UsersTab";
-import { SmsTemplateSettings } from "@/components/settings/SmsTemplateSettings";
 import TreatmentTypesSettings from "@/components/settings/TreatmentTypesSettings";
 import ClinicInfoSettings from "@/components/settings/ClinicInfoSettings";
 import WorkingHoursSettings from "@/components/settings/WorkingHoursSettings";
 import AppointmentDefaultsSettings from "@/components/settings/AppointmentDefaultsSettings";
 import CalendarDisplaySettings from "@/components/settings/CalendarDisplaySettings";
+import CustomerNotificationsSettings from "@/components/settings/CustomerNotificationsSettings";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -123,14 +123,31 @@ const Settings = () => {
                       </AccordionContent>
                     </AccordionItem>
 
+                    <AccordionItem value="customer-notifications">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <MessageCircle className="h-5 w-5 text-primary" />
+                          <div className="text-left">
+                            <p className="font-medium">Notificări Pacienți</p>
+                            <p className="text-sm text-muted-foreground font-normal">
+                              Configurează reminder-ele SMS și șabloanele
+                            </p>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-4">
+                        <CustomerNotificationsSettings />
+                      </AccordionContent>
+                    </AccordionItem>
+
                     <AccordionItem value="notifications">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-3">
                           <Bell className="h-5 w-5 text-primary" />
                           <div className="text-left">
-                            <p className="font-medium">Notificări</p>
+                            <p className="font-medium">Notificări Aplicație</p>
                             <p className="text-sm text-muted-foreground font-normal">
-                              Configurează durata notificărilor
+                              Configurează durata notificărilor din aplicație
                             </p>
                           </div>
                         </div>
@@ -196,22 +213,6 @@ const Settings = () => {
                       </AccordionContent>
                     </AccordionItem>
 
-                    <AccordionItem value="sms">
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center gap-3">
-                          <MessageSquare className="h-5 w-5 text-primary" />
-                          <div className="text-left">
-                            <p className="font-medium">Șablon SMS</p>
-                            <p className="text-sm text-muted-foreground font-normal">
-                              Personalizează mesajele de reminder
-                            </p>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pt-4">
-                        <SmsTemplateSettings />
-                      </AccordionContent>
-                    </AccordionItem>
                   </Accordion>
                 </CardContent>
               </Card>
