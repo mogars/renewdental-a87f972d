@@ -198,11 +198,15 @@ serve(async (req) => {
 
     console.log("Using reminder config:", JSON.stringify(config));
 
-    const now = new Date();
-    const today = now.toISOString().split("T")[0];
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    // Use Romania timezone (Europe/Bucharest) for all time calculations
+    const ROMANIA_OFFSET_MS = 2 * 60 * 60 * 1000; // UTC+2 (winter time)
+    const nowUTC = new Date();
+    const nowRomania = new Date(nowUTC.getTime() + ROMANIA_OFFSET_MS);
+    
+    const today = nowRomania.toISOString().split("T")[0];
+    const tomorrow = new Date(nowRomania.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-    console.log(`Checking appointments for ${today} and ${tomorrow}, current time: ${now.toISOString()}`);
+    console.log(`Checking appointments for ${today} and ${tomorrow}, Romania time: ${nowRomania.toISOString()}, UTC: ${nowUTC.toISOString()}`);
 
     // Fetch appointments for today and tomorrow that are scheduled
     const { data: appointments, error } = await supabase
@@ -237,14 +241,16 @@ serve(async (req) => {
         continue;
       }
 
-      // Parse appointment datetime in local timezone
-      const [aptHour, aptMinute] = apt.start_time.split(":").map(Number);
-      const aptDate = new Date(apt.appointment_date + "T" + apt.start_time);
+      // Parse appointment datetime - stored time is Romania local time
+      // Convert to UTC for comparison: subtract Romania offset
+      const aptDateParsed = new Date(apt.appointment_date + "T" + apt.start_time);
+      const aptDateActualUTC = new Date(aptDateParsed.getTime() - ROMANIA_OFFSET_MS);
       
-      const timeDiffMs = aptDate.getTime() - now.getTime();
+      // Calculate time difference from now (UTC)
+      const timeDiffMs = aptDateActualUTC.getTime() - nowUTC.getTime();
       const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
 
-      console.log(`Appointment ${apt.id}: ${apt.appointment_date} ${apt.start_time}, diff: ${timeDiffHours.toFixed(2)}h`);
+      console.log(`Appointment ${apt.id}: ${apt.appointment_date} ${apt.start_time} (Romania), UTC equiv: ${aptDateActualUTC.toISOString()}, diff: ${timeDiffHours.toFixed(2)}h`);
 
       const patientName = apt.patients.first_name;
       const appointmentTime = apt.start_time.slice(0, 5);
@@ -256,24 +262,24 @@ serve(async (req) => {
 
       const normalizedPhone = normalizePhoneNumber(apt.patients.phone);
 
-      // Send 24-hour reminder (between 23 and 25 hours before)
-      if (config.enabled24h && timeDiffHours >= 23 && timeDiffHours <= 25) {
+      // Send 24-hour reminder (between 22 and 26 hours before - wide window for 30-min cron)
+      if (config.enabled24h && timeDiffHours >= 22 && timeDiffHours <= 26) {
         const message = formatMessage(config.template24h, patientName, appointmentDateStr, appointmentTime);
         console.log(`Sending 24h reminder for appointment ${apt.id}`);
         const success = await sendTextBeeSMS(normalizedPhone, message);
         results.push({ success, appointmentId: apt.id, type: "24h", phone: normalizedPhone });
       }
 
-      // Send 2-hour reminder (between 115 and 125 minutes before)
-      if (config.enabled2h && timeDiffHours >= 1.917 && timeDiffHours <= 2.083) {
+      // Send 2-hour reminder (between 1.5 and 2.5 hours before)
+      if (config.enabled2h && timeDiffHours >= 1.5 && timeDiffHours <= 2.5) {
         const message = formatMessage(config.template2h, patientName, appointmentDateStr, appointmentTime);
         console.log(`Sending 2h reminder for appointment ${apt.id}`);
         const success = await sendTextBeeSMS(normalizedPhone, message);
         results.push({ success, appointmentId: apt.id, type: "2h", phone: normalizedPhone });
       }
 
-      // Send 1-hour reminder (between 55 and 65 minutes before)
-      if (config.enabled1h && timeDiffHours >= 0.917 && timeDiffHours <= 1.083) {
+      // Send 1-hour reminder (between 30 and 90 minutes before - wide window for 30-min cron)
+      if (config.enabled1h && timeDiffHours >= 0.5 && timeDiffHours <= 1.5) {
         const message = formatMessage(config.template1h, patientName, appointmentDateStr, appointmentTime);
         console.log(`Sending 1h reminder for appointment ${apt.id}`);
         const success = await sendTextBeeSMS(normalizedPhone, message);
