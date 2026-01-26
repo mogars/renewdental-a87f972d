@@ -172,6 +172,11 @@ const ChartRecordsTable = ({
                   <TableCell className="border-r border-border">
                     <div className="flex flex-col gap-1">
                       <span className="font-medium">{record.treatment_type}</span>
+                      {record.dentist_name && (
+                        <span className="text-xs text-muted-foreground">
+                          {record.dentist_name}
+                        </span>
+                      )}
                       {record.tooth_number && (
                         <span className="text-xs text-muted-foreground">
                           Tooth #{record.tooth_number}
@@ -202,15 +207,11 @@ const ChartRecordsTable = ({
                   {/* Additional Infos Column */}
                   <TableCell className="border-r border-border">
                     <div className="flex flex-col gap-1 text-sm">
-                      {record.dentist_name && (
-                        <span>{record.dentist_name}</span>
-                      )}
-                      {record.description && (
+                      {record.description ? (
                         <span className="text-muted-foreground line-clamp-2">
                           {record.description}
                         </span>
-                      )}
-                      {!record.dentist_name && !record.description && (
+                      ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </div>
