@@ -32,7 +32,7 @@ import {
   Calendar,
   Shield,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
 const PatientDetail = () => {
@@ -125,7 +125,7 @@ const PatientDetail = () => {
     mutationFn: async (data: ChartRecordFormData) => {
       const { error } = await supabase.from("chart_records").insert({
         patient_id: id,
-        record_date: data.record_date,
+        record_date: format(data.record_date, "yyyy-MM-dd"),
         treatment_type: data.treatment_type,
         tooth_number: data.tooth_number || null,
         description: data.description || null,
@@ -151,7 +151,7 @@ const PatientDetail = () => {
       const { error } = await supabase
         .from("chart_records")
         .update({
-          record_date: data.record_date,
+          record_date: format(data.record_date, "yyyy-MM-dd"),
           treatment_type: data.treatment_type,
           tooth_number: data.tooth_number || null,
           description: data.description || null,
@@ -200,7 +200,7 @@ const PatientDetail = () => {
     if (record) {
       setSelectedRecordId(recordId);
       setEditRecordData({
-        record_date: record.record_date,
+        record_date: parse(record.record_date, "yyyy-MM-dd", new Date()),
         treatment_type: record.treatment_type,
         tooth_number: record.tooth_number || "",
         description: record.description || "",

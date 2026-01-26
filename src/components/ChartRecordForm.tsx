@@ -1,9 +1,13 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Form,
   FormControl,
@@ -25,10 +29,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const chartRecordSchema = z.object({
-  record_date: z.string().min(1, "Date is required"),
+  record_date: z.date({ required_error: "Date is required" }),
   treatment_type: z.string().min(1, "Treatment type is required").max(100),
   tooth_number: z.string().max(20).optional().or(z.literal("")),
   description: z.string().max(1000).optional().or(z.literal("")),
@@ -73,17 +83,30 @@ const ChartRecordForm = ({
   isEditing = false,
   isLoading = false,
 }: ChartRecordFormProps) => {
+  // Fetch active doctors for the dropdown
+  const { data: doctors = [] } = useQuery({
+    queryKey: ["doctors-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("doctors")
+        .select("id, first_name, last_name")
+        .eq("is_active", true)
+        .order("last_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const form = useForm<ChartRecordFormData>({
     resolver: zodResolver(chartRecordSchema),
     defaultValues: {
-      record_date: new Date().toISOString().split("T")[0],
-      treatment_type: "",
-      tooth_number: "",
-      description: "",
-      dentist_name: "",
-      cost: "",
-      status: "completed",
-      ...defaultValues,
+      record_date: defaultValues?.record_date || new Date(),
+      treatment_type: defaultValues?.treatment_type || "",
+      tooth_number: defaultValues?.tooth_number || "",
+      description: defaultValues?.description || "",
+      dentist_name: defaultValues?.dentist_name || "",
+      cost: defaultValues?.cost || "",
+      status: defaultValues?.status || "completed",
     },
   });
 
@@ -109,11 +132,37 @@ const ChartRecordForm = ({
               control={form.control}
               name="record_date"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Date *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "dd/MM/yyyy")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
@@ -178,10 +227,24 @@ const ChartRecordForm = ({
               name="dentist_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Dentist Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Dr. Smith" {...field} />
-                  </FormControl>
+                  <FormLabel>Dentist</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select dentist" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {doctors.map((doctor) => (
+                        <SelectItem
+                          key={doctor.id}
+                          value={`Dr. ${doctor.first_name} ${doctor.last_name}`}
+                        >
+                          Dr. {doctor.first_name} {doctor.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
