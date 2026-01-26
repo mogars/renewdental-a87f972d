@@ -47,29 +47,27 @@ function normalizePhoneNumber(phone: string): string {
   return `+40${cleaned}`;
 }
 
-async function sendTwilioSMS(to: string, body: string): Promise<boolean> {
-  const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-  const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-  const fromNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
+async function sendTextBeeSMS(to: string, body: string): Promise<boolean> {
+  const apiKey = Deno.env.get("TEXTBEE_API_KEY");
+  const deviceId = Deno.env.get("TEXTBEE_DEVICE_ID");
 
-  if (!accountSid || !authToken || !fromNumber) {
-    console.error("Twilio credentials not configured");
+  if (!apiKey || !deviceId) {
+    console.error("TextBee credentials not configured");
     return false;
   }
 
   try {
     const response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+      `https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/send-sms`,
       {
         method: "POST",
         headers: {
-          Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,
-          "Content-Type": "application/x-www-form-urlencoded",
+          "x-api-key": apiKey,
+          "Content-Type": "application/json",
         },
-        body: new URLSearchParams({
-          To: to,
-          From: fromNumber,
-          Body: body,
+        body: JSON.stringify({
+          recipients: [to],
+          message: body,
         }),
       }
     );
@@ -77,7 +75,7 @@ async function sendTwilioSMS(to: string, body: string): Promise<boolean> {
     const result = await response.json();
     
     if (response.ok) {
-      console.log(`SMS sent successfully to ${to}:`, result.sid);
+      console.log(`SMS sent successfully to ${to}:`, result);
       return true;
     } else {
       console.error(`Failed to send SMS to ${to}:`, result);
@@ -222,14 +220,14 @@ serve(async (req) => {
 
       // Send 24-hour reminder (between 23 and 25 hours before)
       if (timeDiffHours >= 23 && timeDiffHours <= 25) {
-        const success = await sendTwilioSMS(normalizedPhone, message);
+        const success = await sendTextBeeSMS(normalizedPhone, message);
         results.push({ success, appointmentId: apt.id, type: "24h" });
       }
 
       // Send 1-hour reminder (between 55 and 65 minutes before)
       if (timeDiffHours >= 0.917 && timeDiffHours <= 1.083) {
         const hourMessage = `Hi ${patientName}! Just a reminder that your dental appointment is in 1 hour at ${appointmentTime}. We look forward to seeing you! - DentaCare`;
-        const success = await sendTwilioSMS(normalizedPhone, hourMessage);
+        const success = await sendTextBeeSMS(normalizedPhone, hourMessage);
         results.push({ success, appointmentId: apt.id, type: "1h" });
       }
     }

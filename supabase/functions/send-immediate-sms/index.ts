@@ -34,28 +34,26 @@ function normalizePhoneNumber(phone: string): string {
   return `+40${cleaned}`;
 }
 
-async function sendTwilioSMS(to: string, body: string): Promise<{ success: boolean; error?: string }> {
-  const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-  const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-  const fromNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
+async function sendTextBeeSMS(to: string, body: string): Promise<{ success: boolean; error?: string }> {
+  const apiKey = Deno.env.get("TEXTBEE_API_KEY");
+  const deviceId = Deno.env.get("TEXTBEE_DEVICE_ID");
 
-  if (!accountSid || !authToken || !fromNumber) {
-    return { success: false, error: "Twilio credentials not configured" };
+  if (!apiKey || !deviceId) {
+    return { success: false, error: "TextBee credentials not configured" };
   }
 
   try {
     const response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+      `https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/send-sms`,
       {
         method: "POST",
         headers: {
-          Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,
-          "Content-Type": "application/x-www-form-urlencoded",
+          "x-api-key": apiKey,
+          "Content-Type": "application/json",
         },
-        body: new URLSearchParams({
-          To: to,
-          From: fromNumber,
-          Body: body,
+        body: JSON.stringify({
+          recipients: [to],
+          message: body,
         }),
       }
     );
@@ -63,7 +61,7 @@ async function sendTwilioSMS(to: string, body: string): Promise<{ success: boole
     const result = await response.json();
 
     if (response.ok) {
-      console.log(`SMS sent successfully to ${to}:`, result.sid);
+      console.log(`SMS sent successfully to ${to}:`, result);
       return { success: true };
     } else {
       console.error(`Failed to send SMS to ${to}:`, result);
@@ -195,7 +193,7 @@ serve(async (req) => {
 
     // Normalize phone number to E.164 format and send the SMS
     const normalizedPhone = normalizePhoneNumber(patient.phone);
-    const result = await sendTwilioSMS(normalizedPhone, message);
+    const result = await sendTextBeeSMS(normalizedPhone, message);
 
     if (result.success) {
       return new Response(
