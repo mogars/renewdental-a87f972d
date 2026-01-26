@@ -8,10 +8,14 @@ import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { Users, Settings2, Bell, Clock, MessageSquare } from "lucide-react";
+import { Users, Settings2, Bell, Clock, MessageSquare, Building2, CalendarClock, Calendar } from "lucide-react";
 import { UsersTab } from "@/components/user-management/UsersTab";
 import { SmsTemplateSettings } from "@/components/settings/SmsTemplateSettings";
 import TreatmentTypesSettings from "@/components/settings/TreatmentTypesSettings";
+import ClinicInfoSettings from "@/components/settings/ClinicInfoSettings";
+import WorkingHoursSettings from "@/components/settings/WorkingHoursSettings";
+import AppointmentDefaultsSettings from "@/components/settings/AppointmentDefaultsSettings";
+import CalendarDisplaySettings from "@/components/settings/CalendarDisplaySettings";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -50,7 +54,75 @@ const Settings = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Accordion type="multiple" className="w-full">
+                  <Accordion type="multiple" className="w-full" defaultValue={["clinic-info"]}>
+                    <AccordionItem value="clinic-info">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <Building2 className="h-5 w-5 text-primary" />
+                          <div className="text-left">
+                            <p className="font-medium">Informații Clinică</p>
+                            <p className="text-sm text-muted-foreground font-normal">
+                              Numele, adresa și datele de contact
+                            </p>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-4">
+                        <ClinicInfoSettings />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="working-hours">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <CalendarClock className="h-5 w-5 text-primary" />
+                          <div className="text-left">
+                            <p className="font-medium">Program de Lucru</p>
+                            <p className="text-sm text-muted-foreground font-normal">
+                              Orele de funcționare pentru fiecare zi
+                            </p>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-4">
+                        <WorkingHoursSettings />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="appointment-defaults">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <Clock className="h-5 w-5 text-primary" />
+                          <div className="text-left">
+                            <p className="font-medium">Setări Programări</p>
+                            <p className="text-sm text-muted-foreground font-normal">
+                              Durate, intervale și limite implicite
+                            </p>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-4">
+                        <AppointmentDefaultsSettings />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="calendar-display">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <Calendar className="h-5 w-5 text-primary" />
+                          <div className="text-left">
+                            <p className="font-medium">Afișare Calendar</p>
+                            <p className="text-sm text-muted-foreground font-normal">
+                              Personalizează vizualizarea calendarului
+                            </p>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-4">
+                        <CalendarDisplaySettings />
+                      </AccordionContent>
+                    </AccordionItem>
+
                     <AccordionItem value="notifications">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-3">
