@@ -1,8 +1,48 @@
 import { Router, Request, Response } from 'express';
-import { query, queryOne, insertAndReturn, updateAndReturn } from '../config/database';
+import { query, queryOne, insertAndReturn, updateAndReturn, transaction } from '../config/database';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
+
+// Create new user (profile + role)
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { email, role } = req.body;
+    // Note: In this simple local version we don't handle password hashing
+    // as it's intended for local development/demonstration.
+
+    const userId = uuidv4();
+    const profileId = uuidv4();
+    const roleId = uuidv4();
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    await transaction(async (connection) => {
+      // Create profile
+      await connection.query(
+        `INSERT INTO profiles (id, user_id, email, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        [profileId, userId, email, now, now]
+      );
+
+      // Create role
+      await connection.query(
+        `INSERT INTO user_roles (id, user_id, role, created_at)
+         VALUES (?, ?, ?, ?)`,
+        [roleId, userId, role, now]
+      );
+    });
+
+    res.status(201).json({
+      id: userId,
+      email,
+      role,
+      success: true
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
 
 // Get all profiles
 router.get('/profiles', async (req: Request, res: Response) => {
