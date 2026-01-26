@@ -1,21 +1,10 @@
-import { getCognitoClientConfig } from "@/lib/cognitoClientConfig";
+import { supabase } from "@/integrations/supabase/client";
 
 // Simple in-memory token storage for Cognito
 let accessToken: string | null = null;
 let idToken: string | null = null;
 let refreshToken: string | null = null;
-
-function getCognitoEndpoint(region: string) {
-  return `https://cognito-idp.${region}.amazonaws.com`;
-}
-
-interface CognitoTokenResponse {
-  access_token: string;
-  id_token: string;
-  refresh_token?: string;
-  token_type: string;
-  expires_in: number;
-}
+let userEmail: string | null = null;
 
 interface CognitoUser {
   sub: string;
@@ -29,9 +18,10 @@ function loadTokens() {
   accessToken = localStorage.getItem('cognito_access_token');
   idToken = localStorage.getItem('cognito_id_token');
   refreshToken = localStorage.getItem('cognito_refresh_token');
+  userEmail = localStorage.getItem('cognito_user_email');
 }
 
-function saveTokens(tokens: { access?: string; id?: string; refresh?: string }) {
+function saveTokens(tokens: { access?: string; id?: string; refresh?: string; email?: string }) {
   if (tokens.access) {
     accessToken = tokens.access;
     localStorage.setItem('cognito_access_token', tokens.access);
@@ -44,15 +34,21 @@ function saveTokens(tokens: { access?: string; id?: string; refresh?: string }) 
     refreshToken = tokens.refresh;
     localStorage.setItem('cognito_refresh_token', tokens.refresh);
   }
+  if (tokens.email) {
+    userEmail = tokens.email;
+    localStorage.setItem('cognito_user_email', tokens.email);
+  }
 }
 
 function clearTokens() {
   accessToken = null;
   idToken = null;
   refreshToken = null;
+  userEmail = null;
   localStorage.removeItem('cognito_access_token');
   localStorage.removeItem('cognito_id_token');
   localStorage.removeItem('cognito_refresh_token');
+  localStorage.removeItem('cognito_user_email');
 }
 
 export function getAccessToken(): string | null {
@@ -102,46 +98,40 @@ export function isAuthenticated(): boolean {
   return Date.now() < exp * 1000;
 }
 
-// Sign in with username and password using Cognito USER_PASSWORD_AUTH flow
+// Sign in with username and password using backend proxy
 export async function signIn(
   email: string,
   password: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { clientId, region } = await getCognitoClientConfig();
-    const response = await fetch(getCognitoEndpoint(region), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-amz-json-1.1',
-        'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
-      },
-      body: JSON.stringify({
-        AuthFlow: 'USER_PASSWORD_AUTH',
-        ClientId: clientId,
-        AuthParameters: {
-          USERNAME: email,
-          PASSWORD: password,
-        },
-      }),
+    const { data, error } = await supabase.functions.invoke('cognito-auth', {
+      body: { action: 'signIn', email, password },
     });
 
-    const data = await response.json();
+    if (error) {
+      console.error('Sign in error:', error);
+      return { success: false, error: error.message || 'Failed to sign in' };
+    }
 
-    if (data.AuthenticationResult) {
+    if (data.error) {
+      return { success: false, error: data.error };
+    }
+
+    if (data.data?.AuthenticationResult) {
       saveTokens({
-        access: data.AuthenticationResult.AccessToken,
-        id: data.AuthenticationResult.IdToken,
-        refresh: data.AuthenticationResult.RefreshToken,
+        access: data.data.AuthenticationResult.AccessToken,
+        id: data.data.AuthenticationResult.IdToken,
+        refresh: data.data.AuthenticationResult.RefreshToken,
+        email: email,
       });
       return { success: true };
     }
 
-    if (data.ChallengeName) {
-      // Handle challenges like NEW_PASSWORD_REQUIRED, MFA, etc.
-      return { success: false, error: `Challenge required: ${data.ChallengeName}` };
+    if (data.data?.ChallengeName) {
+      return { success: false, error: `Challenge required: ${data.data.ChallengeName}` };
     }
 
-    return { success: false, error: data.message || 'Authentication failed' };
+    return { success: false, error: 'Authentication failed' };
   } catch (error) {
     console.error('Sign in error:', error);
     return { success: false, error: 'Failed to sign in' };
@@ -154,30 +144,24 @@ export async function signUp(
   password: string
 ): Promise<{ success: boolean; error?: string; userConfirmed?: boolean }> {
   try {
-    const { clientId, region } = await getCognitoClientConfig();
-    const response = await fetch(getCognitoEndpoint(region), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-amz-json-1.1',
-        'X-Amz-Target': 'AWSCognitoIdentityProviderService.SignUp',
-      },
-      body: JSON.stringify({
-        ClientId: clientId,
-        Username: email,
-        Password: password,
-        UserAttributes: [
-          { Name: 'email', Value: email },
-        ],
-      }),
+    const { data, error } = await supabase.functions.invoke('cognito-auth', {
+      body: { action: 'signUp', email, password },
     });
 
-    const data = await response.json();
-
-    if (data.UserSub) {
-      return { success: true, userConfirmed: data.UserConfirmed };
+    if (error) {
+      console.error('Sign up error:', error);
+      return { success: false, error: error.message || 'Failed to sign up' };
     }
 
-    return { success: false, error: data.message || 'Sign up failed' };
+    if (data.error) {
+      return { success: false, error: data.error };
+    }
+
+    if (data.data?.UserSub) {
+      return { success: true, userConfirmed: data.data.UserConfirmed };
+    }
+
+    return { success: false, error: 'Sign up failed' };
   } catch (error) {
     console.error('Sign up error:', error);
     return { success: false, error: 'Failed to sign up' };
@@ -190,27 +174,20 @@ export async function confirmSignUp(
   code: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { clientId, region } = await getCognitoClientConfig();
-    const response = await fetch(getCognitoEndpoint(region), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-amz-json-1.1',
-        'X-Amz-Target': 'AWSCognitoIdentityProviderService.ConfirmSignUp',
-      },
-      body: JSON.stringify({
-        ClientId: clientId,
-        Username: email,
-        ConfirmationCode: code,
-      }),
+    const { data, error } = await supabase.functions.invoke('cognito-auth', {
+      body: { action: 'confirmSignUp', email, code },
     });
 
-    const data = await response.json();
-
-    if (response.ok) {
-      return { success: true };
+    if (error) {
+      console.error('Confirm sign up error:', error);
+      return { success: false, error: error.message || 'Failed to confirm sign up' };
     }
 
-    return { success: false, error: data.message || 'Confirmation failed' };
+    if (data.error) {
+      return { success: false, error: data.error };
+    }
+
+    return { success: true };
   } catch (error) {
     console.error('Confirm sign up error:', error);
     return { success: false, error: 'Failed to confirm sign up' };
@@ -223,16 +200,8 @@ export async function signOut(): Promise<void> {
   
   if (token) {
     try {
-      const { region } = await getCognitoClientConfig();
-      await fetch(getCognitoEndpoint(region), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-amz-json-1.1',
-          'X-Amz-Target': 'AWSCognitoIdentityProviderService.GlobalSignOut',
-        },
-        body: JSON.stringify({
-          AccessToken: token,
-        }),
+      await supabase.functions.invoke('cognito-auth', {
+        body: { action: 'signOut', accessToken: token },
       });
     } catch (error) {
       console.error('Sign out error:', error);
@@ -249,29 +218,29 @@ export async function refreshSession(): Promise<boolean> {
     if (!refreshToken) return false;
   }
 
+  if (!userEmail) {
+    loadTokens();
+    if (!userEmail) return false;
+  }
+
   try {
-    const { clientId, region } = await getCognitoClientConfig();
-    const response = await fetch(getCognitoEndpoint(region), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-amz-json-1.1',
-        'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
-      },
-      body: JSON.stringify({
-        AuthFlow: 'REFRESH_TOKEN_AUTH',
-        ClientId: clientId,
-        AuthParameters: {
-          REFRESH_TOKEN: refreshToken,
-        },
-      }),
+    const { data, error } = await supabase.functions.invoke('cognito-auth', {
+      body: { action: 'refreshToken', refreshToken, email: userEmail },
     });
 
-    const data = await response.json();
+    if (error) {
+      console.error('Refresh session error:', error);
+      return false;
+    }
 
-    if (data.AuthenticationResult) {
+    if (data.error) {
+      return false;
+    }
+
+    if (data.data?.AuthenticationResult) {
       saveTokens({
-        access: data.AuthenticationResult.AccessToken,
-        id: data.AuthenticationResult.IdToken,
+        access: data.data.AuthenticationResult.AccessToken,
+        id: data.data.AuthenticationResult.IdToken,
       });
       return true;
     }
