@@ -17,7 +17,7 @@ interface DatabaseConfig {
 }
 
 const DEFAULT_CONFIG: DatabaseConfig = {
-  awsApiUrl: "http://localhost:3001",
+  awsApiUrl: import.meta.env.VITE_AWS_API_URL || "http://localhost:3001",
   mysqlHost: "localhost",
   mysqlPort: "3306",
   mysqlDatabase: "dental_clinic",
@@ -36,12 +36,21 @@ const DatabaseConnectionSettings = () => {
   // Load config from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
+    const envUrl = import.meta.env.VITE_AWS_API_URL;
+
     if (saved) {
       try {
-        setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
+        const parsed = JSON.parse(saved);
+        // If saved is localhost but env says otherwise, prefer env (helps with deployment changes)
+        if (parsed.awsApiUrl === "http://localhost:3001" && envUrl && envUrl !== "http://localhost:3001") {
+          parsed.awsApiUrl = envUrl;
+        }
+        setConfig({ ...DEFAULT_CONFIG, ...parsed });
       } catch {
         setConfig(DEFAULT_CONFIG);
       }
+    } else {
+      setConfig(DEFAULT_CONFIG);
     }
   }, []);
 
