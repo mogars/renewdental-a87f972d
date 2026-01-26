@@ -1,20 +1,19 @@
 {
   "name": "dental-clinic-backend",
   "version": "1.0.0",
-  "description": "Express backend for dental clinic management with AWS RDS and Cognito",
+  "description": "Express backend for dental clinic management with MySQL",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "migrate": "node dist/migrations/run.js"
+    "migrate": "ts-node src/migrations/run-mysql.ts"
   },
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
     "helmet": "^7.1.0",
-    "pg": "^8.11.3",
-    "aws-jwt-verify": "^4.0.0",
+    "mysql2": "^3.9.0",
     "dotenv": "^16.3.1",
     "uuid": "^9.0.0"
   },
@@ -22,9 +21,9 @@
     "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
     "@types/node": "^20.10.0",
-    "@types/pg": "^8.10.9",
     "@types/uuid": "^9.0.7",
     "ts-node-dev": "^2.0.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.2"
   }
 }

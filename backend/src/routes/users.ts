@@ -1,48 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { query, queryOne } from '../config/database';
-import { authenticate, requireRole } from '../middleware/auth';
+import { query, queryOne, insertAndReturn, updateAndReturn } from '../config/database';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
-router.use(authenticate);
-
-// Get current user's profile
-router.get('/me', async (req: Request, res: Response) => {
-  try {
-    const profile = await queryOne(
-      'SELECT * FROM profiles WHERE user_id = $1',
-      [req.user!.sub]
-    );
-
-    if (!profile) {
-      res.status(404).json({ error: 'Profile not found' });
-      return;
-    }
-
-    res.json(profile);
-  } catch (error) {
-    console.error('Error fetching profile:', error);
-    res.status(500).json({ error: 'Failed to fetch profile' });
-  }
-});
-
-// Get current user's roles
-router.get('/me/roles', async (req: Request, res: Response) => {
-  try {
-    const roles = await query(
-      'SELECT role FROM user_roles WHERE user_id = $1',
-      [req.user!.sub]
-    );
-    res.json(roles.map(r => r.role));
-  } catch (error) {
-    console.error('Error fetching roles:', error);
-    res.status(500).json({ error: 'Failed to fetch roles' });
-  }
-});
-
-// Get all profiles (admin only)
-router.get('/profiles', requireRole('admin'), async (req: Request, res: Response) => {
+// Get all profiles
+router.get('/profiles', async (req: Request, res: Response) => {
   try {
     const profiles = await query('SELECT * FROM profiles ORDER BY email ASC');
     res.json(profiles);
@@ -52,22 +15,32 @@ router.get('/profiles', requireRole('admin'), async (req: Request, res: Response
   }
 });
 
+// Get profile by user_id
+router.get('/:userId/profile', async (req: Request, res: Response) => {
+  try {
+    const profile = await query(
+      'SELECT * FROM profiles WHERE user_id = ?',
+      [req.params.userId]
+    );
+    res.json(profile);
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
 // Update profile
 router.put('/profile/:userId', async (req: Request, res: Response) => {
   try {
-    // Only allow updating own profile unless admin
-    if (req.params.userId !== req.user!.sub && !req.user!.roles.includes('admin')) {
-      res.status(403).json({ error: 'Cannot update other users profiles' });
-      return;
-    }
-
     const { display_name, phone } = req.body;
-    const now = new Date().toISOString();
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    const profile = await queryOne(
-      `UPDATE profiles SET display_name = $1, phone = $2, updated_at = $3
-       WHERE user_id = $4 RETURNING *`,
-      [display_name, phone, now, req.params.userId]
+    const profile = await updateAndReturn(
+      'profiles',
+      `UPDATE profiles SET display_name = ?, phone = ?, updated_at = ?
+       WHERE user_id = ?`,
+      [display_name, phone, now, req.params.userId],
+      3 // user_id is at index 3
     );
 
     if (!profile) {
@@ -82,8 +55,8 @@ router.put('/profile/:userId', async (req: Request, res: Response) => {
   }
 });
 
-// Get all user roles (admin only)
-router.get('/roles', requireRole('admin'), async (req: Request, res: Response) => {
+// Get all user roles
+router.get('/roles', async (req: Request, res: Response) => {
   try {
     const roles = await query(
       `SELECT ur.*, p.email, p.display_name 
@@ -98,18 +71,28 @@ router.get('/roles', requireRole('admin'), async (req: Request, res: Response) =
   }
 });
 
-// Add role to user (admin only)
-router.post('/roles', requireRole('admin'), async (req: Request, res: Response) => {
+// Add role to user
+router.post('/roles', async (req: Request, res: Response) => {
   try {
     const { user_id, role } = req.body;
     const id = uuidv4();
-    const now = new Date().toISOString();
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    const userRole = await queryOne(
+    // Check if role already exists
+    const existing = await queryOne(
+      'SELECT id FROM user_roles WHERE user_id = ? AND role = ?',
+      [user_id, role]
+    );
+
+    if (existing) {
+      res.status(200).json(existing);
+      return;
+    }
+
+    const userRole = await insertAndReturn(
+      'user_roles',
       `INSERT INTO user_roles (id, user_id, role, created_at)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (user_id, role) DO NOTHING
-       RETURNING *`,
+       VALUES (?, ?, ?, ?)`,
       [id, user_id, role, now]
     );
 
@@ -120,19 +103,17 @@ router.post('/roles', requireRole('admin'), async (req: Request, res: Response) 
   }
 });
 
-// Remove role from user (admin only)
-router.delete('/roles/:id', requireRole('admin'), async (req: Request, res: Response) => {
+// Remove role from user
+router.delete('/roles/:id', async (req: Request, res: Response) => {
   try {
-    const result = await query(
-      'DELETE FROM user_roles WHERE id = $1 RETURNING id',
-      [req.params.id]
-    );
-
-    if (result.length === 0) {
+    const existing = await queryOne('SELECT id FROM user_roles WHERE id = ?', [req.params.id]);
+    
+    if (!existing) {
       res.status(404).json({ error: 'Role not found' });
       return;
     }
 
+    await query('DELETE FROM user_roles WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     console.error('Error removing role:', error);

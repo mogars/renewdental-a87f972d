@@ -20,19 +20,9 @@ const PORT = process.env.PORT || 3001;
 app.use(helmet());
 app.use(express.json());
 
-// CORS configuration
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
+// CORS configuration - allow all origins in development
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true,
   credentials: true,
 }));
 
@@ -41,14 +31,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-// API Routes
-app.use('/api/patients', patientsRouter);
-app.use('/api/appointments', appointmentsRouter);
-app.use('/api/doctors', doctorsRouter);
-app.use('/api/chart-records', chartRecordsRouter);
-app.use('/api/treatment-types', treatmentTypesRouter);
-app.use('/api/settings', appSettingsRouter);
-app.use('/api/users', usersRouter);
+// API Routes (no /api prefix to match frontend expectations)
+app.use('/patients', patientsRouter);
+app.use('/appointments', appointmentsRouter);
+app.use('/doctors', doctorsRouter);
+app.use('/chart-records', chartRecordsRouter);
+app.use('/treatment-types', treatmentTypesRouter);
+app.use('/app-settings', appSettingsRouter);
+app.use('/users', usersRouter);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
