@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Users } from "lucide-react";
 import { UserCard } from "./UserCard";
 import { CreateUserForm } from "./CreateUserForm";
+import { DoctorsSettings } from "@/components/settings/DoctorsSettings";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -130,6 +131,9 @@ export const UsersTab = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Doctors Section */}
+      <DoctorsSettings />
     </div>
   );
 };
