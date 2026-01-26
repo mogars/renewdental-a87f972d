@@ -32,11 +32,15 @@ const PatientCard = ({
               {phone && (
                 <a
                   href={`tel:${phone}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 hover:text-primary transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    window.location.href = `tel:${phone}`;
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 hover:text-primary transition-colors w-fit"
                 >
                   <Phone className="h-3 w-3 shrink-0" />
-                  <span>{phone}</span>
+                  <span className="hover:underline">{phone}</span>
                 </a>
               )}
             </div>
