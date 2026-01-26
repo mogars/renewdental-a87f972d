@@ -8,7 +8,7 @@ import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { Users, Settings2, Bell, Clock, Building2, CalendarClock, Calendar, MessageCircle } from "lucide-react";
+import { Users, Settings2, Bell, Clock, Building2, CalendarClock, Calendar, MessageCircle, Database } from "lucide-react";
 import { UsersTab } from "@/components/user-management/UsersTab";
 import TreatmentTypesSettings from "@/components/settings/TreatmentTypesSettings";
 import ClinicInfoSettings from "@/components/settings/ClinicInfoSettings";
@@ -16,6 +16,7 @@ import WorkingHoursSettings from "@/components/settings/WorkingHoursSettings";
 import AppointmentDefaultsSettings from "@/components/settings/AppointmentDefaultsSettings";
 import CalendarDisplaySettings from "@/components/settings/CalendarDisplaySettings";
 import CustomerNotificationsSettings from "@/components/settings/CustomerNotificationsSettings";
+import DatabaseConnectionSettings from "@/components/settings/DatabaseConnectionSettings";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -210,6 +211,23 @@ const Settings = () => {
                       </AccordionTrigger>
                       <AccordionContent className="pt-4">
                         <TreatmentTypesSettings />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="database">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <Database className="h-5 w-5 text-primary" />
+                          <div className="text-left">
+                            <p className="font-medium">Conexiune Bază de Date</p>
+                            <p className="text-sm text-muted-foreground font-normal">
+                              Parametrii de conectare la baza de date
+                            </p>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-4">
+                        <DatabaseConnectionSettings />
                       </AccordionContent>
                     </AccordionItem>
 
