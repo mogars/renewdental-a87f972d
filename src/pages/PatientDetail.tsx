@@ -177,8 +177,24 @@ const PatientDetail = () => {
     const record = chartRecords?.find((r) => r.id === recordId);
     if (record) {
       setSelectedRecordId(recordId);
+
+      // Robust date parsing
+      let parsedDate = new Date();
+      try {
+        if (record.record_date) {
+          const dateStr = record.record_date.toString().split('T')[0];
+          parsedDate = parse(dateStr, "yyyy-MM-dd", new Date());
+          if (isNaN(parsedDate.getTime())) {
+            parsedDate = new Date(record.record_date);
+          }
+        }
+      } catch (err) {
+        console.error("[DEBUG] Failed to parse record date:", record.record_date, err);
+        parsedDate = new Date();
+      }
+
       setEditRecordData({
-        record_date: parse(record.record_date, "yyyy-MM-dd", new Date()),
+        record_date: isNaN(parsedDate.getTime()) ? new Date() : parsedDate,
         treatment_type: record.treatment_type,
         tooth_number: record.tooth_number || "",
         description: record.description || "",
