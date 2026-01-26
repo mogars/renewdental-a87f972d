@@ -8,32 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -59,7 +37,7 @@ interface ChartRecordFormProps {
 }
 
 const treatmentTypes = [
-  "Cleaning",
+  "Curatare",
   "Filling",
   "Crown",
   "Root Canal",
@@ -139,16 +117,9 @@ const ChartRecordForm = ({
                       <FormControl>
                         <Button
                           variant="outline"
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
+                          className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                         >
-                          {field.value ? (
-                            format(field.value, "dd/MM/yyyy")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
+                          {field.value ? format(field.value, "dd/MM/yyyy") : <span>Pick a date</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </FormControl>
@@ -236,10 +207,7 @@ const ChartRecordForm = ({
                     </FormControl>
                     <SelectContent>
                       {doctors.map((doctor) => (
-                        <SelectItem
-                          key={doctor.id}
-                          value={`Dr. ${doctor.first_name} ${doctor.last_name}`}
-                        >
+                        <SelectItem key={doctor.id} value={`Dr. ${doctor.first_name} ${doctor.last_name}`}>
                           Dr. {doctor.first_name} {doctor.last_name}
                         </SelectItem>
                       ))}
@@ -281,11 +249,7 @@ const ChartRecordForm = ({
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Treatment notes and observations..."
-                      className="min-h-[100px]"
-                      {...field}
-                    />
+                    <Textarea placeholder="Treatment notes and observations..." className="min-h-[100px]" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -293,11 +257,7 @@ const ChartRecordForm = ({
             />
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
