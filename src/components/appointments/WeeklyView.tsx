@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tables } from "@/integrations/supabase/types";
+import { useCalendarSettings } from "@/hooks/useCalendarSettings";
 
 type Doctor = Tables<"doctors">;
 type AppointmentWithPatient = Tables<"appointments"> & {
@@ -36,7 +37,15 @@ const DOCTOR_COLORS = [
   { bg: "bg-indigo-100 dark:bg-indigo-900/40", text: "text-indigo-700 dark:text-indigo-300", border: "border-l-indigo-500" },
 ];
 
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
+// Treatment type colors
+const TREATMENT_COLORS = [
+  { bg: "bg-teal-100 dark:bg-teal-900/40", text: "text-teal-700 dark:text-teal-300", border: "border-l-teal-500" },
+  { bg: "bg-pink-100 dark:bg-pink-900/40", text: "text-pink-700 dark:text-pink-300", border: "border-l-pink-500" },
+  { bg: "bg-lime-100 dark:bg-lime-900/40", text: "text-lime-700 dark:text-lime-300", border: "border-l-lime-500" },
+  { bg: "bg-sky-100 dark:bg-sky-900/40", text: "text-sky-700 dark:text-sky-300", border: "border-l-sky-500" },
+  { bg: "bg-fuchsia-100 dark:bg-fuchsia-900/40", text: "text-fuchsia-700 dark:text-fuchsia-300", border: "border-l-fuchsia-500" },
+  { bg: "bg-yellow-100 dark:bg-yellow-900/40", text: "text-yellow-700 dark:text-yellow-300", border: "border-l-yellow-500" },
+];
 
 export const WeeklyView = ({
   currentDate,
@@ -44,8 +53,18 @@ export const WeeklyView = ({
   onAddAppointment,
   onEditAppointment,
 }: WeeklyViewProps) => {
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+  const { data: calendarSettings } = useCalendarSettings();
+  
+  const weekStartsOn = (calendarSettings?.firstDayOfWeek ?? 1) as 0 | 1;
+  const dayStartHour = calendarSettings?.dayStartHour ?? 8;
+  const dayEndHour = calendarSettings?.dayEndHour ?? 20;
+  const colorByDoctor = calendarSettings?.colorByDoctor ?? true;
+  const colorByTreatment = calendarSettings?.colorByTreatment ?? false;
+  
+  const HOURS = Array.from({ length: dayEndHour - dayStartHour }, (_, i) => i + dayStartHour);
+  
+  const weekStart = startOfWeek(currentDate, { weekStartsOn });
+  const weekEnd = endOfWeek(currentDate, { weekStartsOn });
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
   // Fetch doctors to create color mapping
@@ -61,6 +80,9 @@ export const WeeklyView = ({
     },
   });
 
+  // Collect unique treatment types
+  const treatmentTypes = [...new Set(appointments.map(apt => apt.treatment_type).filter(Boolean))];
+  
   // Create a color map for doctors
   const getDoctorColor = (doctorId: string | null) => {
     if (!doctorId || !doctors) return DOCTOR_COLORS[0];
@@ -68,12 +90,24 @@ export const WeeklyView = ({
     return DOCTOR_COLORS[index % DOCTOR_COLORS.length];
   };
 
+  const getTreatmentColor = (treatmentType: string | null) => {
+    if (!treatmentType) return TREATMENT_COLORS[0];
+    const index = treatmentTypes.indexOf(treatmentType);
+    return TREATMENT_COLORS[index % TREATMENT_COLORS.length];
+  };
+
+  const getAppointmentColor = (apt: AppointmentWithPatient) => {
+    if (colorByTreatment && apt.treatment_type) {
+      return getTreatmentColor(apt.treatment_type);
+    }
+    return getDoctorColor(apt.doctor_id);
+  };
+
   const getDoctorName = (doctorId: string | null) => {
     if (!doctorId || !doctors) return "";
     const doctor = doctors.find((d) => d.id === doctorId);
     return doctor ? `Dr. ${doctor.first_name.charAt(0)}. ${doctor.last_name}` : "";
   };
-
   const getAppointmentsForDayAndHour = (date: Date, hour: number) => {
     return appointments.filter((apt) => {
       if (!isSameDay(parseISO(apt.appointment_date), date)) return false;
@@ -104,8 +138,8 @@ export const WeeklyView = ({
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[800px]">
-        {/* Doctor color legend */}
-        {doctors && doctors.length > 0 && (
+        {/* Color legend based on settings */}
+        {colorByDoctor && doctors && doctors.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-3 px-2">
             <span className="text-xs font-medium text-muted-foreground">Doctors:</span>
             {doctors.map((doctor, index) => {
@@ -115,6 +149,23 @@ export const WeeklyView = ({
                   <div className={cn("h-3 w-3 rounded-sm", colors.bg, "border-l-2", colors.border)} />
                   <span className={cn("text-xs font-medium", colors.text)}>
                     Dr. {doctor.first_name.charAt(0)}. {doctor.last_name}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        
+        {colorByTreatment && treatmentTypes.length > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-3 px-2">
+            <span className="text-xs font-medium text-muted-foreground">Treatments:</span>
+            {treatmentTypes.map((treatment, index) => {
+              const colors = TREATMENT_COLORS[index % TREATMENT_COLORS.length];
+              return (
+                <div key={treatment} className="flex items-center gap-1.5">
+                  <div className={cn("h-3 w-3 rounded-sm", colors.bg, "border-l-2", colors.border)} />
+                  <span className={cn("text-xs font-medium", colors.text)}>
+                    {treatment}
                   </span>
                 </div>
               );
@@ -194,7 +245,7 @@ export const WeeklyView = ({
                     
                     {hourAppointments.map((apt, index) => {
                       const position = getAppointmentPosition(apt.start_time, apt.end_time, index, totalAppointments);
-                      const doctorColors = getDoctorColor(apt.doctor_id);
+                      const appointmentColors = getAppointmentColor(apt);
                       const doctorName = getDoctorName(apt.doctor_id);
                       
                       return (
@@ -211,7 +262,7 @@ export const WeeklyView = ({
                               ? "bg-success/20 text-success border-l-success hover:bg-success/30"
                               : apt.status === "cancelled"
                               ? "bg-destructive/20 text-destructive border-l-destructive hover:bg-destructive/30"
-                              : cn(doctorColors.bg, doctorColors.text, doctorColors.border)
+                              : cn(appointmentColors.bg, appointmentColors.text, appointmentColors.border)
                           )}
                         >
                           <div className="font-medium truncate">

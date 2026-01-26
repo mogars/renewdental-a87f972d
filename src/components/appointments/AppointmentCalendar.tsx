@@ -12,6 +12,7 @@ import { DailyAgenda } from "./DailyAgenda";
 import { WeeklyView } from "./WeeklyView";
 import { Tables } from "@/integrations/supabase/types";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useCalendarSettings } from "@/hooks/useCalendarSettings";
 
 type Doctor = Tables<"doctors">;
 type AppointmentWithPatient = Tables<"appointments"> & {
@@ -38,16 +39,30 @@ export const AppointmentCalendar = ({
   onEditAppointment,
 }: AppointmentCalendarProps) => {
   const isMobile = useIsMobile();
+  const { data: calendarSettings, isLoading: settingsLoading } = useCalendarSettings();
+  
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day">("week");
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("all");
+  const [hasInitializedView, setHasInitializedView] = useState(false);
+
+  // Apply default view from settings once loaded
+  useEffect(() => {
+    if (calendarSettings && !hasInitializedView) {
+      // Only override if not on mobile (mobile always uses day view)
+      if (!isMobile) {
+        setView(calendarSettings.defaultView);
+      }
+      setHasInitializedView(true);
+    }
+  }, [calendarSettings, hasInitializedView, isMobile]);
 
   // Auto-switch to day view on mobile for better UX
   useEffect(() => {
     if (isMobile && view === "week") {
       setView("day");
     }
-  }, [isMobile]);
+  }, [isMobile, view]);
 
   // Fetch doctors for the filter dropdown
   const { data: doctors } = useQuery({
@@ -67,11 +82,20 @@ export const AppointmentCalendar = ({
     ? appointments
     : appointments.filter((apt) => apt.doctor_id === selectedDoctorId);
 
+  const weekStartsOn = (calendarSettings?.firstDayOfWeek ?? 1) as 0 | 1;
+  
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn });
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  
+  const weekDayLabels = weekStartsOn === 0 
+    ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const weekDayLabelsMobile = weekStartsOn === 0 
+    ? ["S", "M", "T", "W", "T", "F", "S"]
+    : ["M", "T", "W", "T", "F", "S", "S"];
 
   const getAppointmentsForDay = (date: Date) => {
     return filteredAppointments.filter(
@@ -164,8 +188,8 @@ export const AppointmentCalendar = ({
                 ? format(currentDate, isMobile ? "EEE, MMM d" : "EEEE, MMMM d, yyyy")
                 : view === "week"
                 ? isMobile 
-                  ? `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "d")}`
-                  : `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d, yyyy")}`
+                  ? `${format(startOfWeek(currentDate, { weekStartsOn }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn }), "d")}`
+                  : `Week of ${format(startOfWeek(currentDate, { weekStartsOn }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn }), "MMM d, yyyy")}`
                 : format(currentDate, isMobile ? "MMM yyyy" : "MMMM yyyy")}
             </CardTitle>
             <Button variant="outline" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={navigateNext}>
@@ -199,7 +223,7 @@ export const AppointmentCalendar = ({
       </CardHeader>
 
       <CardContent className="px-2 sm:px-6">
-        {isLoading ? (
+        {isLoading || settingsLoading ? (
           <div className="flex h-96 items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
@@ -207,7 +231,7 @@ export const AppointmentCalendar = ({
           <div className="overflow-hidden rounded-lg border border-border">
             {/* Day headers */}
             <div className="grid grid-cols-7 bg-muted">
-              {(isMobile ? ["M", "T", "W", "T", "F", "S", "S"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]).map((day, i) => (
+              {(isMobile ? weekDayLabelsMobile : weekDayLabels).map((day, i) => (
                 <div
                   key={`${day}-${i}`}
                   className="border-b border-r border-border p-1 sm:p-2 text-center text-xs sm:text-sm font-medium text-muted-foreground last:border-r-0"
