@@ -80,10 +80,14 @@ async function importPatients(filePath: string) {
         // Combine everything else into last name
         const lastName = nameParts.join(' ');
 
-        if (!firstName || !lastName) {
-            console.warn(`\nLine ${i + 1} skipped: Missing name (First: "${firstName}", Last: "${lastName}")`);
+        if (!firstName) {
+            console.warn(`\nLine ${i + 1} skipped: Missing first name`);
             errorCount++;
             continue;
+        }
+
+        if (!lastName) {
+            console.log(`\nLine ${i + 1}: Contact only has one name ("${firstName}"). Proceeding...`);
         }
 
         try {
