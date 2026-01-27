@@ -1,6 +1,18 @@
-const API_URL = import.meta.env.VITE_AWS_API_URL || 'http://localhost:3001';
+const getBaseUrl = () => {
+  const saved = localStorage.getItem("mysql_database_config");
+  if (saved) {
+    try {
+      const config = JSON.parse(saved);
+      if (config.awsApiUrl) return config.awsApiUrl;
+    } catch (e) {
+      console.error("Failed to parse saved config", e);
+    }
+  }
+  return import.meta.env.VITE_AWS_API_URL || 'http://localhost:3001';
+};
 
 export async function apiGet<T>(path: string): Promise<T> {
+  const API_URL = getBaseUrl();
   const response = await fetch(`${API_URL}${path}`, {
     method: 'GET',
     headers: {
@@ -17,6 +29,7 @@ export async function apiGet<T>(path: string): Promise<T> {
 }
 
 export async function apiPost<T>(path: string, body: any): Promise<T> {
+  const API_URL = getBaseUrl();
   const response = await fetch(`${API_URL}${path}`, {
     method: 'POST',
     headers: {
@@ -34,6 +47,7 @@ export async function apiPost<T>(path: string, body: any): Promise<T> {
 }
 
 export async function apiPut<T>(path: string, body: any): Promise<T> {
+  const API_URL = getBaseUrl();
   const response = await fetch(`${API_URL}${path}`, {
     method: 'PUT',
     headers: {
@@ -51,6 +65,7 @@ export async function apiPut<T>(path: string, body: any): Promise<T> {
 }
 
 export async function apiDelete<T>(path: string): Promise<T> {
+  const API_URL = getBaseUrl();
   const response = await fetch(`${API_URL}${path}`, {
     method: 'DELETE',
     headers: {

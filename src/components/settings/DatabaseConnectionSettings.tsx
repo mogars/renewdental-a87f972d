@@ -36,15 +36,10 @@ const DatabaseConnectionSettings = () => {
   // Load config from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    const envUrl = import.meta.env.VITE_AWS_API_URL;
 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // If saved is localhost but env says otherwise, prefer env (helps with deployment changes)
-        if (parsed.awsApiUrl === "http://localhost:3001" && envUrl && envUrl !== "http://localhost:3001") {
-          parsed.awsApiUrl = envUrl;
-        }
         setConfig({ ...DEFAULT_CONFIG, ...parsed });
       } catch {
         setConfig(DEFAULT_CONFIG);
