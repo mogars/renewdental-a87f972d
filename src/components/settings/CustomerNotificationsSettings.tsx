@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, MessageSquare, Clock, Bell, Settings2 } from "lucide-react";
 
 interface ReminderConfig {
+  enabled24h: boolean;
   enabled2h: boolean;
   enabled1h: boolean;
   template24h: string;
@@ -22,6 +23,7 @@ interface ReminderConfig {
 }
 
 const DEFAULT_CONFIG: ReminderConfig = {
+  enabled24h: true,
   enabled2h: true,
   enabled1h: true,
   template24h: "Bună ziua {patient_name}! Vă reamintim că aveți o programare la clinică în data de {appointment_date} la ora {appointment_time}. Răspundeți cu DA pentru confirmare.",
@@ -176,6 +178,18 @@ export function CustomerNotificationsSettings() {
         </div>
 
         <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label className="text-base">Reminder cu 24 ore înainte</Label>
+              <p className="text-sm text-muted-foreground">
+                Trimis cu 24 ore înainte de programare
+              </p>
+            </div>
+            <Switch
+              checked={config.enabled24h}
+              onCheckedChange={(checked) => updateConfig("enabled24h", checked)}
+            />
+          </div>
 
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
