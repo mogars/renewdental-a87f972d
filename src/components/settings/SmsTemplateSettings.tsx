@@ -8,12 +8,6 @@ import { Loader2, Save } from "lucide-react";
 
 const DEFAULT_TEMPLATE = "Hi {patient_name}! This is a reminder for your dental appointment on {appointment_date} at {appointment_time}. Please reply CONFIRM to confirm or call us to reschedule. - DentaCare";
 
-const PLACEHOLDERS = [
-  { key: "{patient_name}", description: "Patient's first name" },
-  { key: "{appointment_date}", description: "Formatted appointment date" },
-  { key: "{appointment_time}", description: "Appointment time (HH:MM)" },
-];
-
 const STORAGE_KEY = "sms_template";
 
 export function SmsTemplateSettings() {
@@ -68,11 +62,6 @@ export function SmsTemplateSettings() {
     setIsDirty(false);
   };
 
-  const insertPlaceholder = (placeholder: string) => {
-    setTemplate((prev) => prev + placeholder);
-    setIsDirty(true);
-  };
-
   // Calculate character count
   const charCount = template.length;
   const smsCount = Math.ceil(charCount / 160);
@@ -103,26 +92,6 @@ export function SmsTemplateSettings() {
           {isDirty && (
             <span className="text-amber-500 dark:text-amber-400">Modificări nesalvate</span>
           )}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Placeholder-e Disponibile</Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          Click pe un placeholder pentru a-l insera în șablon
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {PLACEHOLDERS.map(({ key, description }) => (
-            <Badge
-              key={key}
-              variant="secondary"
-              className="cursor-pointer hover:bg-secondary/80"
-              onClick={() => insertPlaceholder(key)}
-              title={description}
-            >
-              {key}
-            </Badge>
-          ))}
         </div>
       </div>
 

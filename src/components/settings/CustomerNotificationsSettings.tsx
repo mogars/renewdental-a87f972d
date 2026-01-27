@@ -31,12 +31,6 @@ const DEFAULT_CONFIG: ReminderConfig = {
   textbeeDeviceId: "",
 };
 
-const PLACEHOLDERS = [
-  { key: "{patient_name}", description: "Numele pacientului" },
-  { key: "{appointment_date}", description: "Data programării" },
-  { key: "{appointment_time}", description: "Ora programării (HH:MM)" },
-];
-
 const STORAGE_KEY = "sms_reminder_config";
 
 export function CustomerNotificationsSettings() {
@@ -112,13 +106,6 @@ export function CustomerNotificationsSettings() {
   const updateConfig = <K extends keyof ReminderConfig>(key: K, value: ReminderConfig[K]) => {
     setConfig(prev => ({ ...prev, [key]: value }));
     setIsDirty(true);
-  };
-
-  const insertPlaceholder = (placeholder: string) => {
-    const templateKey = `template${activeTemplate.toUpperCase()}` as keyof ReminderConfig;
-    if (typeof config[templateKey] === 'string') {
-      updateConfig(templateKey as any, config[templateKey] + placeholder);
-    }
   };
 
   const getActiveTemplate = () => {
@@ -267,26 +254,6 @@ export function CustomerNotificationsSettings() {
             <span>
               {charCount} caractere ({smsCount} SMS{smsCount !== 1 ? "-uri" : ""})
             </span>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Placeholder-e Disponibile</Label>
-          <p className="text-xs text-muted-foreground mb-2">
-            Click pe un placeholder pentru a-l insera în șablon
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {PLACEHOLDERS.map(({ key, description }) => (
-              <Badge
-                key={key}
-                variant="secondary"
-                className="cursor-pointer hover:bg-secondary/80"
-                onClick={() => insertPlaceholder(key)}
-                title={description}
-              >
-                {key}
-              </Badge>
-            ))}
           </div>
         </div>
       </div>
