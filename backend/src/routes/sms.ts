@@ -29,9 +29,12 @@ async function sendTextBeeSMS(to: string, body: string) {
     const apiKey = process.env.TEXTBEE_API_KEY;
     const deviceId = process.env.TEXTBEE_DEVICE_ID;
 
-    if (!apiKey || !deviceId) {
-        return { success: false, error: "TextBee credentials not configured in backend .env" };
+    if (!apiKey || !deviceId || apiKey === 'your_api_key_here') {
+        console.error("[DEBUG] SMS Config Missing:", { apiKey: !!apiKey, deviceId: !!deviceId });
+        return { success: false, error: "TextBee credentials not configured. Please update backend/.env" };
     }
+
+    console.log(`[DEBUG] Attempting to send SMS to ${to} via device ${deviceId}`);
 
     try {
         const response = await fetch(
@@ -50,14 +53,16 @@ async function sendTextBeeSMS(to: string, body: string) {
         );
 
         const result: any = await response.json();
+        console.log(`[DEBUG] TextBee API Status: ${response.status}`, result);
 
         if (response.ok) {
             return { success: true };
         } else {
-            return { success: false, error: result.message || "Failed to send SMS via TextBee" };
+            return { success: false, error: result.message || `TextBee Error (${response.status})` };
         }
     } catch (error: any) {
-        return { success: false, error: error.message || "Unknown error calling TextBee" };
+        console.error("[DEBUG] TextBee Fetch Error:", error);
+        return { success: false, error: error.message || "Network error calling TextBee" };
     }
 }
 
