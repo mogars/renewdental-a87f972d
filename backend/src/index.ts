@@ -11,6 +11,7 @@ import treatmentTypesRouter from './routes/treatment-types';
 import appSettingsRouter from './routes/app-settings';
 import usersRouter from './routes/users';
 import smsRouter from './routes/sms';
+import { initReminderService } from './services/reminder-service';
 
 dotenv.config();
 

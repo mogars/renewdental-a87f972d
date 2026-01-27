@@ -63,6 +63,12 @@ export function CustomerNotificationsSettings() {
             fetch(`${apiConfig.awsApiUrl}/app-settings/sms_template_1h`).then(res => res.json()).catch(e => { console.error("1h template fetch failed:", e); return []; })
           ]);
 
+          const toggles = await Promise.all([
+            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_enabled_24h`).then(res => res.json()).catch(() => []),
+            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_enabled_2h`).then(res => res.json()).catch(() => []),
+            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_enabled_1h`).then(res => res.json()).catch(() => [])
+          ]);
+
           if (apiKeys[0]?.[0]?.value) currentConfig.textbeeApiKey = apiKeys[0][0].value;
           if (apiKeys[1]?.[0]?.value) currentConfig.textbeeDeviceId = apiKeys[1][0].value;
 
@@ -70,7 +76,11 @@ export function CustomerNotificationsSettings() {
           if (templates[1]?.[0]?.value) currentConfig.template2h = templates[1][0].value;
           if (templates[2]?.[0]?.value) currentConfig.template1h = templates[2][0].value;
 
-          console.log("[DEBUG] Loaded Backend Settings:", { keys: apiKeys, templates });
+          if (toggles[0]?.[0]?.value) currentConfig.enabled24h = toggles[0][0].value === 'true';
+          if (toggles[1]?.[0]?.value) currentConfig.enabled2h = toggles[1][0].value === 'true';
+          if (toggles[2]?.[0]?.value) currentConfig.enabled1h = toggles[2][0].value === 'true';
+
+          console.log("[DEBUG] Loaded Backend Settings:", { keys: apiKeys, templates, toggles });
         } catch (err) {
           console.warn("Failed to fetch settings from backend:", err);
         }
@@ -97,7 +107,10 @@ export function CustomerNotificationsSettings() {
         { key: 'textbee_device_id', value: config.textbeeDeviceId, description: 'TextBee Device ID' },
         { key: 'sms_template_24h', value: config.template24h, description: 'SMS Template 24h' },
         { key: 'sms_template_2h', value: config.template2h, description: 'SMS Template 2h' },
-        { key: 'sms_template_1h', value: config.template1h, description: 'SMS Template 1h' }
+        { key: 'sms_template_1h', value: config.template1h, description: 'SMS Template 1h' },
+        { key: 'sms_enabled_24h', value: String(config.enabled24h), description: 'SMS Enabled 24h' },
+        { key: 'sms_enabled_2h', value: String(config.enabled2h), description: 'SMS Enabled 2h' },
+        { key: 'sms_enabled_1h', value: String(config.enabled1h), description: 'SMS Enabled 1h' }
       ];
       console.log("[DEBUG] Sending payload to backend:", JSON.stringify(payload, null, 2));
 
