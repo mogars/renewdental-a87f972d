@@ -21,12 +21,18 @@ router.get('/:key', async (req: Request, res: Response) => {
 // Upsert settings (supports single object or array)
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const settings = Array.isArray(req.body) ? req.body : [req.body];
+    const isArray = Array.isArray(req.body);
+    const settings = isArray ? req.body : [req.body];
     const results = [];
+
+    console.log(`[DEBUG] POST /app-settings - Received ${settings.length} settings to process.`);
+    if (isArray) {
+      console.log(`[DEBUG] Keys received: ${settings.map((s: any) => s.key).join(', ')}`);
+    }
 
     for (const item of settings) {
       const { key, value, description } = item;
-      console.log(`[DEBUG] Processing setting - Key: ${key}, Value Length: ${value?.length || 0}`);
+      console.log(`[DEBUG] Step 1: Processing ${key} (Value length: ${value?.length || 0})`);
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
       try {
@@ -35,34 +41,36 @@ router.post('/', async (req: Request, res: Response) => {
           [key]
         );
 
-        let setting;
         if (existing) {
-          console.log(`[DEBUG] Updating existing setting: ${key}`);
+          console.log(`[DEBUG] Step 2: Updating ${key}`);
           await query(
             "UPDATE app_settings SET value = ?, description = ?, updated_at = ? WHERE `key` = ?",
-            [value, description, now, key]
+            [value, description || '', now, key]
           );
-          setting = await queryOne('SELECT * FROM app_settings WHERE `key` = ?', [key]);
         } else {
-          console.log(`[DEBUG] Creating new setting: ${key}`);
+          console.log(`[DEBUG] Step 2: Creating ${key}`);
           const id = uuidv4();
           await query(
             "INSERT INTO app_settings (id, `key`, value, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            [id, key, value, description, now, now]
+            [id, key, value, description || '', now, now]
           );
-          setting = await queryOne('SELECT * FROM app_settings WHERE `key` = ?', [key]);
         }
-        results.push(setting);
+
+        const verification = await queryOne('SELECT `key`, value FROM app_settings WHERE `key` = ?', [key]);
+        console.log(`[DEBUG] Step 3: Verified ${key} in DB: ${verification ? 'SUCCESS' : 'FAILED'}`);
+        results.push(verification);
       } catch (loopErr: any) {
-        console.error(`[DEBUG] Error processing key ${key}:`, loopErr.message);
-        throw loopErr; // Bubble up to main catch
+        console.error(`[DEBUG] FATAL Error for key ${key}:`, loopErr.message);
+        results.push({ key, error: loopErr.message });
+        // Don't throw, let the loop continue
       }
     }
 
-    res.json(Array.isArray(req.body) ? results : results[0]);
+    console.log(`[DEBUG] Processing complete. Responding with ${results.length} results.`);
+    res.json(isArray ? results : results[0]);
   } catch (error: any) {
-    console.error('[DEBUG] Global Save Error:', error);
-    res.status(500).json({ error: error.message || 'Failed to save setting(s)' });
+    console.error('[DEBUG] Global Settings Handler Error:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 

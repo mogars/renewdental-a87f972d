@@ -92,17 +92,19 @@ export function CustomerNotificationsSettings() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 
       // Save sensitive keys and templates to backend
-      console.log("[DEBUG] Saving TextBee keys and templates to backend...");
+      const payload = [
+        { key: 'textbee_api_key', value: config.textbeeApiKey, description: 'TextBee API Key' },
+        { key: 'textbee_device_id', value: config.textbeeDeviceId, description: 'TextBee Device ID' },
+        { key: 'sms_template_24h', value: config.template24h, description: 'SMS Template 24h' },
+        { key: 'sms_template_2h', value: config.template2h, description: 'SMS Template 2h' },
+        { key: 'sms_template_1h', value: config.template1h, description: 'SMS Template 1h' }
+      ];
+      console.log("[DEBUG] Sending payload to backend:", JSON.stringify(payload, null, 2));
+
       const response = await fetch(`${apiConfig.awsApiUrl}/app-settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([
-          { key: 'textbee_api_key', value: config.textbeeApiKey, description: 'TextBee API Key' },
-          { key: 'textbee_device_id', value: config.textbeeDeviceId, description: 'TextBee Device ID' },
-          { key: 'sms_template_24h', value: config.template24h, description: 'SMS Template 24h' },
-          { key: 'sms_template_2h', value: config.template2h, description: 'SMS Template 2h' },
-          { key: 'sms_template_1h', value: config.template1h, description: 'SMS Template 1h' }
-        ])
+        body: JSON.stringify(payload)
       });
 
       console.log("[DEBUG] Backend Save Status:", response.status);
