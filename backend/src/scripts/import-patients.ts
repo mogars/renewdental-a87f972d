@@ -61,26 +61,25 @@ async function importPatients(filePath: string) {
         }
 
         const firstName = parts[0];
-        let lastName = parts[1];
-        let phone = parts[2];
+        const remainingParts = parts.slice(1);
 
-        // Logic to detect if Last Name and Phone are swapped
-        // If Last Name looks like a phone number and Phone looks like a name, swap them
-        if (isPhoneNumber(lastName) && isAlphabetic(phone)) {
-            console.log(`\nLine ${i + 1}: Detected swapped Last Name ("${lastName}") and Phone ("${phone}"). Swapping...`);
-            const temp = lastName;
-            lastName = phone;
-            phone = temp;
-        } else if (isPhoneNumber(lastName) && !isPhoneNumber(phone)) {
-            // If lastName is a phone but phone isn't a phone (maybe just empty or has letters), swap
-            console.log(`\nLine ${i + 1}: Last Name ("${lastName}") looks like a phone number. Swapping with Phone field...`);
-            const temp = lastName;
-            lastName = phone;
-            phone = temp;
+        // Find the phone number (first part that starts with 07 or similar)
+        let phone = '';
+        let nameParts: string[] = [];
+
+        for (const part of remainingParts) {
+            if (!phone && isPhoneNumber(part)) {
+                phone = part;
+            } else if (part) {
+                nameParts.push(part);
+            }
         }
 
+        // Combine everything else into last name
+        const lastName = nameParts.join(' ');
+
         if (!firstName || !lastName) {
-            console.warn(`Line ${i + 1} skipped: Missing name`);
+            console.warn(`\nLine ${i + 1} skipped: Missing name (First: "${firstName}", Last: "${lastName}")`);
             errorCount++;
             continue;
         }
