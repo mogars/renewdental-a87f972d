@@ -3,6 +3,18 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { query, pool } from '../config/database';
 
+function isPhoneNumber(str: string): boolean {
+    // Phone numbers are usually numerical, might have +, -, (), spaces
+    // But user specifically said "phone is numerical"
+    // Let's check if it's mostly digits
+    return /^[0-9\s\-\+\(\)]+$/.test(str) && /[0-9]/.test(str);
+}
+
+function isAlphabetic(str: string): boolean {
+    // Names usually contain letters
+    return /[a-zA-Z]/.test(str);
+}
+
 async function importPatients(filePath: string) {
     console.log(`Reading file: ${filePath}`);
 
@@ -50,8 +62,23 @@ async function importPatients(filePath: string) {
         }
 
         const firstName = parts[0];
-        const lastName = parts[1];
+        let lastName = parts[1];
         let phone = parts[2];
+
+        // Logic to detect if Last Name and Phone are swapped
+        // If Last Name looks like a phone number and Phone looks like a name, swap them
+        if (isPhoneNumber(lastName) && isAlphabetic(phone)) {
+            console.log(`\nLine ${i + 1}: Detected swapped Last Name ("${lastName}") and Phone ("${phone}"). Swapping...`);
+            const temp = lastName;
+            lastName = phone;
+            phone = temp;
+        } else if (isPhoneNumber(lastName) && !isPhoneNumber(phone)) {
+            // If lastName is a phone but phone isn't a phone (maybe just empty or has letters), swap
+            console.log(`\nLine ${i + 1}: Last Name ("${lastName}") looks like a phone number. Swapping with Phone field...`);
+            const temp = lastName;
+            lastName = phone;
+            phone = temp;
+        }
 
         if (!firstName || !lastName) {
             console.warn(`Line ${i + 1} skipped: Missing name`);
