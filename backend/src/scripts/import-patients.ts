@@ -68,9 +68,11 @@ async function importPatients(filePath: string) {
         let nameParts: string[] = [];
 
         for (const part of remainingParts) {
+            if (!part || part.toUpperCase() === 'N') continue;
+
             if (!phone && isPhoneNumber(part)) {
                 phone = part;
-            } else if (part) {
+            } else {
                 nameParts.push(part);
             }
         }
