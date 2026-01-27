@@ -102,7 +102,7 @@ const DatabaseConnectionSettings = () => {
         <CardContent className="pt-6 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-              Status Conexiune Backend
+              Conexiune Server Bază de Date
             </h4>
             <Button variant="ghost" size="sm" onClick={checkConnection}>
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -114,7 +114,7 @@ const DatabaseConnectionSettings = () => {
             <div className="flex items-center gap-3">
               <Database className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="font-medium text-sm">Server Backend (Raspberry Pi)</p>
+                <p className="font-medium text-sm">Server baza de date</p>
                 <p className="text-xs text-muted-foreground">{config.awsApiUrl}</p>
               </div>
             </div>
