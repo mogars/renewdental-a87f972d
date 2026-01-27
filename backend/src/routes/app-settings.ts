@@ -18,42 +18,47 @@ router.get('/:key', async (req: Request, res: Response) => {
   }
 });
 
-// Upsert a setting
+// Upsert settings (supports single object or array)
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { key, value, description } = req.body;
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const settings = Array.isArray(req.body) ? req.body : [req.body];
+    const results = [];
 
-    const existing = await queryOne(
-      'SELECT id FROM app_settings WHERE `key` = ?',
-      [key]
-    );
+    for (const item of settings) {
+      const { key, value, description } = item;
+      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    let setting;
-    if (existing) {
-      setting = await updateAndReturn(
-        'app_settings',
-        `UPDATE app_settings SET value = ?, description = ?, updated_at = ?
-         WHERE \`key\` = ?`,
-        [value, description, now, key],
-        3 // key is at index 3
+      const existing = await queryOne(
+        'SELECT id FROM app_settings WHERE `key` = ?',
+        [key]
       );
-      // Re-fetch by key since we updated by key not id
-      setting = await queryOne('SELECT * FROM app_settings WHERE `key` = ?', [key]);
-    } else {
-      const id = uuidv4();
-      setting = await insertAndReturn(
-        'app_settings',
-        `INSERT INTO app_settings (id, \`key\`, value, description, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, key, value, description, now, now]
-      );
+
+      let setting;
+      if (existing) {
+        await updateAndReturn(
+          'app_settings',
+          `UPDATE app_settings SET value = ?, description = ?, updated_at = ?
+           WHERE \`key\` = ?`,
+          [value, description, now, key],
+          3 // key is at index 3
+        );
+        setting = await queryOne('SELECT * FROM app_settings WHERE \`key\` = ?', [key]);
+      } else {
+        const id = uuidv4();
+        setting = await insertAndReturn(
+          'app_settings',
+          `INSERT INTO app_settings (id, \`key\`, value, description, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [id, key, value, description, now, now]
+        );
+      }
+      results.push(setting);
     }
 
-    res.json(setting);
+    res.json(Array.isArray(req.body) ? results : results[0]);
   } catch (error) {
-    console.error('Error saving setting:', error);
-    res.status(500).json({ error: 'Failed to save setting' });
+    console.error('Error saving setting(s):', error);
+    res.status(500).json({ error: 'Failed to save setting(s)' });
   }
 });
 

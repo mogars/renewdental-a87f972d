@@ -26,15 +26,23 @@ function normalizePhoneNumber(phone: string) {
 }
 
 async function sendTextBeeSMS(to: string, body: string) {
-    const apiKey = process.env.TEXTBEE_API_KEY;
-    const deviceId = process.env.TEXTBEE_DEVICE_ID;
+    // 1. Try to get credentials from DB first
+    const dbApiKey = await queryOne("SELECT value FROM app_settings WHERE `key` = 'textbee_api_key'");
+    const dbDeviceId = await queryOne("SELECT value FROM app_settings WHERE `key` = 'textbee_device_id'");
+
+    const apiKey = dbApiKey?.value || process.env.TEXTBEE_API_KEY;
+    const deviceId = dbDeviceId?.value || process.env.TEXTBEE_DEVICE_ID;
 
     if (!apiKey || !deviceId || apiKey === 'your_api_key_here') {
-        console.error("[DEBUG] SMS Config Missing:", { apiKey: !!apiKey, deviceId: !!deviceId });
-        return { success: false, error: "TextBee credentials not configured. Please update backend/.env" };
+        console.error("[DEBUG] SMS Config Missing (DB or ENV):", {
+            hasApiKey: !!apiKey,
+            hasDeviceId: !!deviceId,
+            source: dbApiKey ? 'database' : 'environment'
+        });
+        return { success: false, error: "TextBee credentials not configured. Please update Settings -> Notificari Pacienti" };
     }
 
-    console.log(`[DEBUG] Attempting to send SMS to ${to} via device ${deviceId}`);
+    console.log(`[DEBUG] Attempting to send SMS to ${to} via device ${deviceId} (Source: ${dbApiKey ? 'DB' : 'ENV'})`);
 
     try {
         const response = await fetch(

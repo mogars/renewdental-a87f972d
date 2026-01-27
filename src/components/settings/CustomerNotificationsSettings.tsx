@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -7,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, MessageSquare, Clock, Bell } from "lucide-react";
+import { Loader2, Save, MessageSquare, Clock, Bell, Settings2 } from "lucide-react";
 
 interface ReminderConfig {
   enabled24h: boolean;
@@ -17,6 +18,8 @@ interface ReminderConfig {
   template24h: string;
   template2h: string;
   template1h: string;
+  textbeeApiKey: string;
+  textbeeDeviceId: string;
 }
 
 const DEFAULT_CONFIG: ReminderConfig = {
@@ -27,6 +30,8 @@ const DEFAULT_CONFIG: ReminderConfig = {
   template24h: "Bună ziua {patient_name}! Vă reamintim că aveți o programare la clinică în data de {appointment_date} la ora {appointment_time}. Răspundeți cu DA pentru confirmare.",
   template2h: "Bună {patient_name}! Programarea dvs. este în 2 ore, la {appointment_time}. Vă așteptăm!",
   template1h: "Bună {patient_name}! Programarea dvs. este în 1 oră, la {appointment_time}. Ne vedem curând!",
+  textbeeApiKey: "",
+  textbeeDeviceId: "",
 };
 
 const PLACEHOLDERS = [
@@ -46,24 +51,57 @@ export function CustomerNotificationsSettings() {
   const [activeTemplate, setActiveTemplate] = useState<"24h" | "2h" | "1h">("24h");
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(stored) });
+    const loadConfig = async () => {
+      try {
+        // Load from localStorage first (legacy/UI state)
+        const stored = localStorage.getItem(STORAGE_KEY);
+        let currentConfig = stored ? { ...DEFAULT_CONFIG, ...JSON.parse(stored) } : DEFAULT_CONFIG;
+
+        // Load sensitive keys from backend
+        try {
+          const apiSettings = await Promise.all([
+            fetch(`http://localhost:3001/app-settings/textbee_api_key`).then(res => res.json()),
+            fetch(`http://localhost:3001/app-settings/textbee_device_id`).then(res => res.json())
+          ]);
+
+          if (apiSettings[0]?.[0]?.value) currentConfig.textbeeApiKey = apiSettings[0][0].value;
+          if (apiSettings[1]?.[0]?.value) currentConfig.textbeeDeviceId = apiSettings[1][0].value;
+        } catch (err) {
+          console.warn("Failed to fetch TextBee settings from backend:", err);
+        }
+
+        setConfig(currentConfig);
+      } catch (e) {
+        console.error("Failed to load reminder config:", e);
       }
-    } catch (e) {
-      console.error("Failed to load reminder config:", e);
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    loadConfig();
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Save UI config to localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+
+      // Save sensitive keys to backend
+      const response = await fetch(`http://localhost:3001/app-settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([
+          { key: 'textbee_api_key', value: config.textbeeApiKey, description: 'TextBee API Key' },
+          { key: 'textbee_device_id', value: config.textbeeDeviceId, description: 'TextBee Device ID' }
+        ])
+      });
+
+      if (!response.ok) throw new Error("Failed to save to backend");
+
       setIsDirty(false);
       toast({ title: "Salvat", description: "Configurația notificărilor a fost actualizată." });
     } catch (e) {
+      console.error("Save error:", e);
       toast({ title: "Eroare", description: "Nu s-a putut salva configurația.", variant: "destructive" });
     }
     setIsSaving(false);
@@ -110,6 +148,37 @@ export function CustomerNotificationsSettings() {
 
   return (
     <div className="space-y-6">
+      {/* TextBee Config */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Settings2 className="h-5 w-5 text-primary" />
+          <h3 className="font-medium">Configurare TextBee</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="textbee-api-key">API Key TextBee</Label>
+            <Input
+              id="textbee-api-key"
+              type="password"
+              value={config.textbeeApiKey}
+              onChange={(e) => updateConfig("textbeeApiKey", e.target.value)}
+              placeholder="Introdu API Key..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="textbee-device-id">Device ID TextBee</Label>
+            <Input
+              id="textbee-device-id"
+              value={config.textbeeDeviceId}
+              onChange={(e) => updateConfig("textbeeDeviceId", e.target.value)}
+              placeholder="Introdu Device ID..."
+            />
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
       {/* Reminder Toggles */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-4">
