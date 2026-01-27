@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { config as apiConfig } from "@/config/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -60,9 +61,11 @@ export function CustomerNotificationsSettings() {
         // Load sensitive keys from backend
         try {
           const apiSettings = await Promise.all([
-            fetch(`http://localhost:3001/app-settings/textbee_api_key`).then(res => res.json()),
-            fetch(`http://localhost:3001/app-settings/textbee_device_id`).then(res => res.json())
+            fetch(`${apiConfig.awsApiUrl}/app-settings/textbee_api_key`).then(res => res.json()),
+            fetch(`${apiConfig.awsApiUrl}/app-settings/textbee_device_id`).then(res => res.json())
           ]);
+
+          console.log("[DEBUG] Loaded API Settings:", apiSettings);
 
           if (apiSettings[0]?.[0]?.value) currentConfig.textbeeApiKey = apiSettings[0][0].value;
           if (apiSettings[1]?.[0]?.value) currentConfig.textbeeDeviceId = apiSettings[1][0].value;
@@ -87,7 +90,8 @@ export function CustomerNotificationsSettings() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 
       // Save sensitive keys to backend
-      const response = await fetch(`http://localhost:3001/app-settings`, {
+      console.log("[DEBUG] Saving TextBee keys to backend...");
+      const response = await fetch(`${apiConfig.awsApiUrl}/app-settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify([
@@ -95,6 +99,8 @@ export function CustomerNotificationsSettings() {
           { key: 'textbee_device_id', value: config.textbeeDeviceId, description: 'TextBee Device ID' }
         ])
       });
+
+      console.log("[DEBUG] Backend Save Status:", response.status);
 
       if (!response.ok) throw new Error("Failed to save to backend");
 
