@@ -50,19 +50,29 @@ export function CustomerNotificationsSettings() {
         const stored = localStorage.getItem(STORAGE_KEY);
         let currentConfig = stored ? { ...DEFAULT_CONFIG, ...JSON.parse(stored) } : DEFAULT_CONFIG;
 
-        // Load sensitive keys from backend
+        // Load sensitive keys and templates from backend
         try {
-          const apiSettings = await Promise.all([
+          const apiKeys = await Promise.all([
             fetch(`${apiConfig.awsApiUrl}/app-settings/textbee_api_key`).then(res => res.json()),
             fetch(`${apiConfig.awsApiUrl}/app-settings/textbee_device_id`).then(res => res.json())
           ]);
 
-          console.log("[DEBUG] Loaded API Settings:", apiSettings);
+          const templates = await Promise.all([
+            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_template_24h`).then(res => res.json()),
+            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_template_2h`).then(res => res.json()),
+            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_template_1h`).then(res => res.json())
+          ]);
 
-          if (apiSettings[0]?.[0]?.value) currentConfig.textbeeApiKey = apiSettings[0][0].value;
-          if (apiSettings[1]?.[0]?.value) currentConfig.textbeeDeviceId = apiSettings[1][0].value;
+          if (apiKeys[0]?.[0]?.value) currentConfig.textbeeApiKey = apiKeys[0][0].value;
+          if (apiKeys[1]?.[0]?.value) currentConfig.textbeeDeviceId = apiKeys[1][0].value;
+
+          if (templates[0]?.[0]?.value) currentConfig.template24h = templates[0][0].value;
+          if (templates[1]?.[0]?.value) currentConfig.template2h = templates[1][0].value;
+          if (templates[2]?.[0]?.value) currentConfig.template1h = templates[2][0].value;
+
+          console.log("[DEBUG] Loaded Backend Settings:", { keys: apiKeys, templates });
         } catch (err) {
-          console.warn("Failed to fetch TextBee settings from backend:", err);
+          console.warn("Failed to fetch settings from backend:", err);
         }
 
         setConfig(currentConfig);
@@ -81,14 +91,17 @@ export function CustomerNotificationsSettings() {
       // Save UI config to localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 
-      // Save sensitive keys to backend
-      console.log("[DEBUG] Saving TextBee keys to backend...");
+      // Save sensitive keys and templates to backend
+      console.log("[DEBUG] Saving TextBee keys and templates to backend...");
       const response = await fetch(`${apiConfig.awsApiUrl}/app-settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify([
           { key: 'textbee_api_key', value: config.textbeeApiKey, description: 'TextBee API Key' },
-          { key: 'textbee_device_id', value: config.textbeeDeviceId, description: 'TextBee Device ID' }
+          { key: 'textbee_device_id', value: config.textbeeDeviceId, description: 'TextBee Device ID' },
+          { key: 'sms_template_24h', value: config.template24h, description: 'SMS Template 24h' },
+          { key: 'sms_template_2h', value: config.template2h, description: 'SMS Template 2h' },
+          { key: 'sms_template_1h', value: config.template1h, description: 'SMS Template 1h' }
         ])
       });
 

@@ -103,13 +103,17 @@ router.post('/', async (req: Request, res: Response) => {
             return;
         }
 
-        // 2. Fetch SMS template
+        // 2. Fetch SMS template (Prioritize the 24h template from UI settings)
         const templateSetting = await queryOne(
-            "SELECT value FROM app_settings WHERE `key` = 'sms_template'"
+            "SELECT value FROM app_settings WHERE `key` = 'sms_template_24h'"
         );
 
-        const defaultTemplate = "Hi {patient_name}! This is a reminder for your dental appointment on {appointment_date} at {appointment_time}. Please call us if you need to reschedule. - Renew Dental";
-        const template = templateSetting?.value || defaultTemplate;
+        // Fallback to legacy key or default
+        let template = templateSetting?.value;
+        if (!template) {
+            const legacySetting = await queryOne("SELECT value FROM app_settings WHERE `key` = 'sms_template'");
+            template = legacySetting?.value || "Hi {patient_name}! This is a reminder for your dental appointment on {appointment_date} at {appointment_time}. Please call us if you need to reschedule. - Renew Dental";
+        }
 
         // 3. Format message
         const appointmentTime = appointment.start_time.slice(0, 5);
