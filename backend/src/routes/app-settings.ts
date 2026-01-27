@@ -35,22 +35,20 @@ router.post('/', async (req: Request, res: Response) => {
 
       let setting;
       if (existing) {
-        await updateAndReturn(
-          'app_settings',
-          `UPDATE app_settings SET value = ?, description = ?, updated_at = ?
-           WHERE \`key\` = ?`,
-          [value, description, now, key],
-          3 // key is at index 3
+        console.log(`[DEBUG] Updating existing setting: ${key}`);
+        await query(
+          "UPDATE app_settings SET value = ?, description = ?, updated_at = ? WHERE `key` = ?",
+          [value, description, now, key]
         );
-        setting = await queryOne('SELECT * FROM app_settings WHERE \`key\` = ?', [key]);
+        setting = await queryOne('SELECT * FROM app_settings WHERE `key` = ?', [key]);
       } else {
+        console.log(`[DEBUG] Creating new setting: ${key}`);
         const id = uuidv4();
-        setting = await insertAndReturn(
-          'app_settings',
-          `INSERT INTO app_settings (id, \`key\`, value, description, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?)`,
+        await query(
+          "INSERT INTO app_settings (id, `key`, value, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
           [id, key, value, description, now, now]
         );
+        setting = await queryOne('SELECT * FROM app_settings WHERE `key` = ?', [key]);
       }
       results.push(setting);
     }

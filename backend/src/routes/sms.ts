@@ -104,15 +104,26 @@ router.post('/', async (req: Request, res: Response) => {
         }
 
         // 2. Fetch SMS template (Prioritize the 24h template from UI settings)
+        console.log("[DEBUG] Fetching 24h template from DB...");
         const templateSetting = await queryOne(
             "SELECT value FROM app_settings WHERE `key` = 'sms_template_24h'"
         );
 
-        // Fallback to legacy key or default
+        // Fallback logic with logging
         let template = templateSetting?.value;
-        if (!template) {
+        if (template) {
+            console.log("[DEBUG] Using 24h template from DB:", template.substring(0, 30) + "...");
+        } else {
+            console.log("[DEBUG] 24h template not found or empty. Checking legacy key...");
             const legacySetting = await queryOne("SELECT value FROM app_settings WHERE `key` = 'sms_template'");
-            template = legacySetting?.value || "Hi {patient_name}! This is a reminder for your dental appointment on {appointment_date} at {appointment_time}. Please call us if you need to reschedule. - Renew Dental";
+            template = legacySetting?.value;
+
+            if (template) {
+                console.log("[DEBUG] Using legacy template from DB:", template.substring(0, 30) + "...");
+            } else {
+                template = "Hi {patient_name}! This is a reminder for your dental appointment on {appointment_date} at {appointment_time}. Please call us if you need to reschedule. - Renew Dental";
+                console.log("[DEBUG] No templates found in DB. Using hardcoded default.");
+            }
         }
 
         // 3. Format message
@@ -127,6 +138,8 @@ router.post('/', async (req: Request, res: Response) => {
             .replace(/{patient_name}/g, appointment.first_name)
             .replace(/{appointment_date}/g, appointmentDateStr)
             .replace(/{appointment_time}/g, appointmentTime);
+
+        console.log("[DEBUG] Final Message Body:", message);
 
         // 4. Send SMS
         const normalizedPhone = normalizePhoneNumber(appointment.phone);
