@@ -3,11 +3,12 @@ import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Clock, User, Phone, Mail, FileText, MessageSquare, Loader2 } from "lucide-react";
+import { Plus, Clock, User, Phone, Mail, FileText, MessageSquare, Loader2, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { config } from "@/config/api";
 import type { AppointmentWithPatient } from "@/types/database";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DailyAgendaProps {
   date: Date;
@@ -34,7 +35,6 @@ export const DailyAgenda = ({
     setSendingSmsFor(appointmentId);
 
     try {
-      // Call the Express backend SMS endpoint
       const response = await fetch(
         `${config.awsApiUrl}/send-sms`,
         {
@@ -75,14 +75,73 @@ export const DailyAgenda = ({
   const getStatusBadge = (status: string | null) => {
     switch (status) {
       case "completed":
-        return <Badge className="bg-success/20 text-success hover:bg-success/30">Completed</Badge>;
+        return <Badge className="bg-success/20 text-success hover:bg-success/30 border-none">Completed</Badge>;
       case "cancelled":
-        return <Badge className="bg-destructive/20 text-destructive hover:bg-destructive/30">Cancelled</Badge>;
+        return <Badge className="bg-destructive/20 text-destructive hover:bg-destructive/30 border-none">Cancelled</Badge>;
       case "no-show":
-        return <Badge className="bg-warning/20 text-warning hover:bg-warning/30">No Show</Badge>;
+        return <Badge className="bg-warning/20 text-warning hover:bg-warning/30 border-none">No Show</Badge>;
       default:
-        return <Badge className="bg-secondary text-secondary-foreground">Scheduled</Badge>;
+        return <Badge className="bg-secondary text-secondary-foreground border-none">Scheduled</Badge>;
     }
+  };
+
+  const NotificationStatus = ({ apt }: { apt: AppointmentWithPatient }) => {
+    return (
+      <TooltipProvider>
+        <div className="flex gap-1.5 items-center mt-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors border cursor-default",
+                apt.reminder_sent_24h
+                  ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                  : "bg-muted text-muted-foreground border-muted-foreground/10"
+              )}>
+                <Bell className="h-2.5 w-2.5" />
+                24h
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {apt.reminder_sent_24h ? "Reminder-ul de 24h a fost trimis" : "Reminder-ul de 24h nu a fost trimis încă"}
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors border cursor-default",
+                apt.reminder_sent_2h
+                  ? "bg-purple-500/10 text-purple-500 border-purple-500/20"
+                  : "bg-muted text-muted-foreground border-muted-foreground/10"
+              )}>
+                <Bell className="h-2.5 w-2.5" />
+                2h
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {apt.reminder_sent_2h ? "Reminder-ul de 2h a fost trimis" : "Reminder-ul de 2h nu a fost trimis încă"}
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors border cursor-default",
+                apt.reminder_sent_1h
+                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                  : "bg-muted text-muted-foreground border-muted-foreground/10"
+              )}>
+                <Bell className="h-2.5 w-2.5" />
+                1h
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {apt.reminder_sent_1h ? "Reminder-ul de 1h a fost trimis" : "Reminder-ul de 1h nu a fost trimis încă"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
+    );
   };
 
   return (
@@ -137,7 +196,7 @@ export const DailyAgenda = ({
 
                       <div className="space-y-1">
                         <h4 className="font-semibold text-foreground">{apt.title}</h4>
-                        
+
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <User className="h-3.5 w-3.5" />
                           <span>
@@ -167,6 +226,8 @@ export const DailyAgenda = ({
                             <span className="line-clamp-2">{apt.notes}</span>
                           </div>
                         )}
+
+                        <NotificationStatus apt={apt} />
                       </div>
                     </div>
 
@@ -180,7 +241,10 @@ export const DailyAgenda = ({
                           variant="outline"
                           size="sm"
                           className="h-7 gap-1 text-xs"
-                          onClick={(e) => sendImmediateSms(e, apt.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sendImmediateSms(e, apt.id);
+                          }}
                           disabled={sendingSmsFor === apt.id}
                         >
                           {sendingSmsFor === apt.id ? (

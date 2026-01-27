@@ -2,7 +2,8 @@ import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO 
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/services/api";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Bell } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useCalendarSettings } from "@/hooks/useCalendarSettings";
 import type { AppointmentWithPatient, Doctor } from "@/types/database";
@@ -43,15 +44,15 @@ export const WeeklyView = ({
   onEditAppointment,
 }: WeeklyViewProps) => {
   const { data: calendarSettings } = useCalendarSettings();
-  
+
   const weekStartsOn = (calendarSettings?.firstDayOfWeek ?? 1) as 0 | 1;
   const dayStartHour = calendarSettings?.dayStartHour ?? 8;
   const dayEndHour = calendarSettings?.dayEndHour ?? 20;
   const colorByDoctor = calendarSettings?.colorByDoctor ?? true;
   const colorByTreatment = calendarSettings?.colorByTreatment ?? false;
-  
+
   const HOURS = Array.from({ length: dayEndHour - dayStartHour }, (_, i) => i + dayStartHour);
-  
+
   const weekStart = startOfWeek(currentDate, { weekStartsOn });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn });
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
@@ -66,7 +67,7 @@ export const WeeklyView = ({
 
   // Collect unique treatment types
   const treatmentTypes = [...new Set(appointments.map(apt => apt.treatment_type).filter(Boolean))];
-  
+
   // Create a color map for doctors
   const getDoctorColor = (doctorId: string | null) => {
     if (!doctorId || !doctors) return DOCTOR_COLORS[0];
@@ -107,13 +108,13 @@ export const WeeklyView = ({
     const startOffset = (startMin / 60) * 100;
     const duration = (endHour - startHour) * 60 + (endMin - startMin);
     const height = (duration / 60) * 100;
-    
+
     // Calculate width and position for side-by-side display
     const width = total > 1 ? 100 / total : 100;
     const left = index * width;
-    
-    return { 
-      top: `${startOffset}%`, 
+
+    return {
+      top: `${startOffset}%`,
       height: `${Math.max(height, 50)}%`,
       width: `${width - 1}%`,
       left: `${left}%`
@@ -140,7 +141,7 @@ export const WeeklyView = ({
             })}
           </div>
         )}
-        
+
         {colorByTreatment && treatmentTypes.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-3 px-2">
             <span className="text-xs font-medium text-muted-foreground">Treatments:</span>
@@ -203,7 +204,7 @@ export const WeeklyView = ({
                 const totalAppointments = hourAppointments.length;
 
                 const formattedHour = hour.toString().padStart(2, '0') + ':00';
-                
+
                 return (
                   <div
                     key={`${day.toISOString()}-${hour}`}
@@ -227,12 +228,12 @@ export const WeeklyView = ({
                     >
                       <Plus className="h-3 w-3" />
                     </Button>
-                    
+
                     {hourAppointments.map((apt, index) => {
                       const position = getAppointmentPosition(apt.start_time, apt.end_time, index, totalAppointments);
                       const appointmentColors = getAppointmentColor(apt);
                       const doctorName = getDoctorName(apt.doctor_id);
-                      
+
                       return (
                         <button
                           key={apt.id}
@@ -246,8 +247,8 @@ export const WeeklyView = ({
                             apt.status === "completed"
                               ? "bg-success/20 text-success border-l-success hover:bg-success/30"
                               : apt.status === "cancelled"
-                              ? "bg-destructive/20 text-destructive border-l-destructive hover:bg-destructive/30"
-                              : cn(appointmentColors.bg, appointmentColors.text, appointmentColors.border)
+                                ? "bg-destructive/20 text-destructive border-l-destructive hover:bg-destructive/30"
+                                : cn(appointmentColors.bg, appointmentColors.text, appointmentColors.border)
                           )}
                         >
                           <div className="font-medium truncate">
@@ -260,6 +261,35 @@ export const WeeklyView = ({
                           )}
                           <div className="text-[10px] opacity-75 truncate">
                             {apt.start_time.slice(0, 5)}
+                          </div>
+
+                          <div className="mt-1 flex gap-0.5">
+                            <TooltipProvider>
+                              {apt.reminder_sent_24h && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>24h Sent</TooltipContent>
+                                </Tooltip>
+                              )}
+                              {apt.reminder_sent_2h && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>2h Sent</TooltipContent>
+                                </Tooltip>
+                              )}
+                              {apt.reminder_sent_1h && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>1h Sent</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </TooltipProvider>
                           </div>
                         </button>
                       );

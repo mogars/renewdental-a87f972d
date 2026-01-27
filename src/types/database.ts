@@ -30,6 +30,9 @@ export interface Appointment {
   treatment_type: string | null;
   dentist_name: string | null;
   google_event_id: string | null;
+  reminder_sent_24h: boolean;
+  reminder_sent_2h: boolean;
+  reminder_sent_1h: boolean;
   created_at: string;
   updated_at: string;
   // Joined relations
