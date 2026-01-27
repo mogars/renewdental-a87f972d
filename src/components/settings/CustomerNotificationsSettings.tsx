@@ -12,10 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, MessageSquare, Clock, Bell, Settings2 } from "lucide-react";
 
 interface ReminderConfig {
-  enabled24h: boolean;
   enabled2h: boolean;
   enabled1h: boolean;
-  daysBefore: number;
   template24h: string;
   template2h: string;
   template1h: string;
@@ -24,10 +22,8 @@ interface ReminderConfig {
 }
 
 const DEFAULT_CONFIG: ReminderConfig = {
-  enabled24h: true,
   enabled2h: true,
   enabled1h: true,
-  daysBefore: 1,
   template24h: "Bună ziua {patient_name}! Vă reamintim că aveți o programare la clinică în data de {appointment_date} la ora {appointment_time}. Răspundeți cu DA pentru confirmare.",
   template2h: "Bună {patient_name}! Programarea dvs. este în 2 ore, la {appointment_time}. Vă așteptăm!",
   template1h: "Bună {patient_name}! Programarea dvs. este în 1 oră, la {appointment_time}. Ne vedem curând!",
@@ -193,18 +189,6 @@ export function CustomerNotificationsSettings() {
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label className="text-base">Reminder cu 1 zi înainte</Label>
-              <p className="text-sm text-muted-foreground">
-                Trimis cu {config.daysBefore} {config.daysBefore === 1 ? 'zi' : 'zile'} înainte de programare
-              </p>
-            </div>
-            <Switch
-              checked={config.enabled24h}
-              onCheckedChange={(checked) => updateConfig("enabled24h", checked)}
-            />
-          </div>
 
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
@@ -234,32 +218,6 @@ export function CustomerNotificationsSettings() {
         </div>
       </div>
 
-      <Separator />
-
-      {/* Days Before Setting */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-primary" />
-          <h3 className="font-medium">Timing Reminder 24h</h3>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <Label>Reminder-ul de 24h se trimite cu:</Label>
-            <span className="text-sm font-medium">{config.daysBefore} {config.daysBefore === 1 ? 'zi' : 'zile'} înainte</span>
-          </div>
-          <Slider
-            value={[config.daysBefore]}
-            onValueChange={([value]) => updateConfig("daysBefore", value)}
-            min={1}
-            max={7}
-            step={1}
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Cu câte zile înainte se trimite primul reminder
-          </p>
-        </div>
-      </div>
 
       <Separator />
 
