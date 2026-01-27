@@ -178,7 +178,7 @@ const ChartRecordForm = ({
                 name="cost"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Cost ($)</FormLabel>
+                    <FormLabel>Cost (lei)</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" placeholder="150.00" {...field} />
                     </FormControl>

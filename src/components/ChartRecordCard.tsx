@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, User, Pencil, Trash2 } from "lucide-react";
+import { Calendar, Coins, User, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface ChartRecordCardProps {
@@ -85,8 +85,8 @@ const ChartRecordCard = ({
               )}
               {cost && (
                 <div className="flex items-center gap-1.5">
-                  <DollarSign className="h-3.5 w-3.5" />
-                  <span>{Number(cost).toFixed(2)}</span>
+                  <Coins className="h-3.5 w-3.5" />
+                  <span>{Number(cost).toFixed(2)} lei</span>
                 </div>
               )}
             </div>
