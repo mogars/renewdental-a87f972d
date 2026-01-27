@@ -53,21 +53,29 @@ async function processThreshold(
     const template = await getSetting(templateKey);
     if (!template) return;
 
-    // Sliding Window Logic:
-    // We only find appointments that are currently in the "active slot" for this reminder.
+    // Use current local time from JS to avoid DB timezone confusion
+    // We add a small 2-minute "safety overlap" to catch reminders if the cron runs slightly late
+    const now = new Date();
+
+    // We search for appointments where (DATE + TIME) is between (now + min) and (now + max)
+    // For 1h: between 0h and 1h2m in the future.
     const sql = `
     SELECT a.*, p.first_name, p.last_name, p.phone
     FROM appointments a
     JOIN patients p ON a.patient_id = p.id
     WHERE a.${sentFlag} = 0
     AND a.status != 'cancelled'
-    AND TIMESTAMP(a.appointment_date, a.start_time) > DATE_ADD(NOW(), INTERVAL ? HOUR)
-    AND TIMESTAMP(a.appointment_date, a.start_time) <= DATE_ADD(NOW(), INTERVAL ? HOUR)
+    AND TIMESTAMP(a.appointment_date, a.start_time) >= ?
+    AND TIMESTAMP(a.appointment_date, a.start_time) <= DATE_ADD(?, INTERVAL ? MINUTE)
   `;
 
-    const appointments = await query(sql, [minHours, maxHours]);
+    // Calculate window in minutes
+    const maxMinutes = (maxHours * 60) + 2; // +2m grace period
+    const minTime = new Date(now.getTime() + (minHours * 60 * 60 * 1000));
+
+    const appointments = await query(sql, [minTime, now, maxMinutes]);
     if (appointments.length > 0) {
-        console.log(`[REMINDER SERVICE] ${thresholdTitle} Window (${minHours}h-${maxHours}h) found ${appointments.length} appointments.`);
+        console.log(`[REMINDER SERVICE] ${thresholdTitle} Window found ${appointments.length} appointments.`);
     }
 
     for (let i = 0; i < appointments.length; i++) {
@@ -99,11 +107,10 @@ async function processThreshold(
 }
 
 async function processReminders() {
-    const dbTimeResult = await queryOne('SELECT NOW() as now');
-    const dbTime = dbTimeResult?.now;
-    const systemTime = new Date().toLocaleString('ro-RO');
+    const now = new Date();
+    const systemTime = now.toLocaleString('ro-RO');
 
-    console.log(`[REMINDER SERVICE SCAN] System: ${systemTime} | DB NOW(): ${dbTime}`);
+    console.log(`[REMINDER SERVICE SCAN] System Time: ${systemTime}`);
 
     const apiKey = await getSetting('textbee_api_key');
     const deviceId = await getSetting('textbee_device_id');
@@ -115,11 +122,7 @@ async function processReminders() {
 
     const creds = { apiKey, deviceId };
 
-    // Run thresholds with non-overlapping windows
-    // Current Logic:
-    // 1h Reminder = Now to Now+1h
-    // 2h Reminder = Now+1h to Now+2h
-    // 24h Reminder = Now+2h to Now+24h
+    // Thresholds with JS-driven absolute safety
     await processThreshold('1h Reminder', 0, 1, 'sms_enabled_1h', 'sms_template_1h', 'reminder_sent_1h', creds);
     await processThreshold('2h Reminder', 1, 2, 'sms_enabled_2h', 'sms_template_2h', 'reminder_sent_2h', creds);
     await processThreshold('24h Reminder', 2, 24, 'sms_enabled_24h', 'sms_template_24h', 'reminder_sent_24h', creds);

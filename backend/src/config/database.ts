@@ -61,6 +61,8 @@ export async function query<T = any>(text: string, params?: any[]): Promise<T[]>
   const connection = await pool.getConnection();
   try {
     const convertedQuery = convertQuery(text);
+    // Explicitly set session timezone just in case
+    await connection.query("SET time_zone = '+02:00'");
     const [rows] = await connection.query<RowDataPacket[]>(convertedQuery, params);
     return rows as T[];
   } catch (error) {
