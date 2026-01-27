@@ -153,7 +153,7 @@ export const DailyAgenda = ({
           </div>
           <h3 className="mb-2 font-semibold text-foreground">No appointments</h3>
           <p className="mb-6 text-muted-foreground">
-            No appointments scheduled for {format(date, "EEEE, MMMM d")}.
+            No appointments scheduled for {format(date, "EEEE, dd/MM/yyyy")}.
           </p>
           <Button onClick={onAddAppointment}>
             <Plus className="mr-2 h-4 w-4" />

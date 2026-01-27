@@ -64,7 +64,7 @@ const ChartRecordCard = ({
                 <span>
                   {(() => {
                     try {
-                      return format(new Date(recordDate), "MMM d, yyyy");
+                      return format(new Date(recordDate), "dd/MM/yyyy");
                     } catch {
                       return recordDate;
                     }

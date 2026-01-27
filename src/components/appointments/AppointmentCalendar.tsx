@@ -29,7 +29,7 @@ export const AppointmentCalendar = ({
 }: AppointmentCalendarProps) => {
   const isMobile = useIsMobile();
   const { data: calendarSettings, isLoading: settingsLoading } = useCalendarSettings();
-  
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day">("week");
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("all");
@@ -66,17 +66,17 @@ export const AppointmentCalendar = ({
     : appointments.filter((apt) => apt.doctor_id === selectedDoctorId);
 
   const weekStartsOn = (calendarSettings?.firstDayOfWeek ?? 1) as 0 | 1;
-  
+
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn });
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn });
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  
-  const weekDayLabels = weekStartsOn === 0 
+
+  const weekDayLabels = weekStartsOn === 0
     ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const weekDayLabelsMobile = weekStartsOn === 0 
+  const weekDayLabelsMobile = weekStartsOn === 0
     ? ["S", "M", "T", "W", "T", "F", "S"]
     : ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -161,12 +161,12 @@ export const AppointmentCalendar = ({
             </Button>
             <CardTitle className="flex-1 text-center font-display text-sm sm:text-lg">
               {view === "day"
-                ? format(currentDate, isMobile ? "EEE, MMM d" : "EEEE, MMMM d, yyyy")
+                ? format(currentDate, isMobile ? "EEE, dd/MM" : "EEEE, dd/MM/yyyy")
                 : view === "week"
-                ? isMobile 
-                  ? `${format(startOfWeek(currentDate, { weekStartsOn }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn }), "d")}`
-                  : `Week of ${format(startOfWeek(currentDate, { weekStartsOn }), "MMM d")} - ${format(endOfWeek(currentDate, { weekStartsOn }), "MMM d, yyyy")}`
-                : format(currentDate, isMobile ? "MMM yyyy" : "MMMM yyyy")}
+                  ? isMobile
+                    ? `${format(startOfWeek(currentDate, { weekStartsOn }), "dd/MM")} - ${format(endOfWeek(currentDate, { weekStartsOn }), "dd/MM/yyyy")}`
+                    : `Week of ${format(startOfWeek(currentDate, { weekStartsOn }), "dd/MM")} - ${format(endOfWeek(currentDate, { weekStartsOn }), "dd/MM/yyyy")}`
+                  : format(currentDate, isMobile ? "MMM yyyy" : "MMMM yyyy")}
             </CardTitle>
             <Button variant="outline" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={navigateNext}>
               <ChevronRight className="h-4 w-4" />
@@ -177,7 +177,7 @@ export const AppointmentCalendar = ({
             <Button variant="ghost" size="sm" onClick={goToToday} className="text-xs sm:text-sm">
               Today
             </Button>
-            
+
             <Tabs value={view} onValueChange={(v) => setView(v as "month" | "week" | "day")}>
               <TabsList className="h-8 sm:h-10">
                 <TabsTrigger value="month" className="gap-1 px-2 sm:gap-2 sm:px-3 text-xs sm:text-sm">
@@ -273,8 +273,8 @@ export const AppointmentCalendar = ({
                             apt.status === "completed"
                               ? "bg-success/20 text-success hover:bg-success/30"
                               : apt.status === "cancelled"
-                              ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
-                              : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                                ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
+                                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                           )}
                         >
                           {isMobile ? apt.start_time.slice(0, 5) : `${apt.start_time.slice(0, 5)} ${apt.patients?.first_name}`}

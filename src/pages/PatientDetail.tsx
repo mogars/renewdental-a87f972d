@@ -297,7 +297,7 @@ const PatientDetail = () => {
                     <span>
                       {(() => {
                         try {
-                          return format(new Date(patient.date_of_birth), "MMMM d, yyyy");
+                          return format(new Date(patient.date_of_birth), "dd/MM/yyyy");
                         } catch {
                           return patient.date_of_birth;
                         }

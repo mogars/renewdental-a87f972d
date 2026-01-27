@@ -120,7 +120,7 @@ export const AppointmentForm = ({
       const [hours, minutes] = startTime.split(':').map(Number);
       const endHours = hours + 1;
       const endTime = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-      
+
       setFormData((prev) => ({
         ...prev,
         patientId: "",
@@ -316,7 +316,7 @@ export const AppointmentForm = ({
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.date ? format(formData.date, "PPP") : "Pick a date"}
+                  {formData.date ? format(formData.date, "dd/MM/yyyy") : "Pick a date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">

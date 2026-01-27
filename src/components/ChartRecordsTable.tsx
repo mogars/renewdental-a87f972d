@@ -167,7 +167,7 @@ const ChartRecordsTable = ({
                   <TableCell className="border-r border-border font-medium">
                     {(() => {
                       try {
-                        return format(new Date(record.record_date), "MMM d, yyyy");
+                        return format(new Date(record.record_date), "dd/MM/yyyy");
                       } catch {
                         return record.record_date;
                       }

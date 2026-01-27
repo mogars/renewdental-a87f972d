@@ -196,7 +196,7 @@ export const WeeklyView = ({
               className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-border"
             >
               <div className="border-r border-border p-2 text-right text-xs text-muted-foreground">
-                {format(new Date().setHours(hour, 0), "h a")}
+                {format(new Date().setHours(hour, 0), "HH:mm")}
               </div>
               {days.map((day) => {
                 const hourAppointments = getAppointmentsForDayAndHour(day, hour);
