@@ -58,9 +58,9 @@ export function CustomerNotificationsSettings() {
           ]);
 
           const templates = await Promise.all([
-            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_template_24h`).then(res => res.json()),
-            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_template_2h`).then(res => res.json()),
-            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_template_1h`).then(res => res.json())
+            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_template_24h`).then(res => res.json()).catch(e => { console.error("24h template fetch failed:", e); return []; }),
+            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_template_2h`).then(res => res.json()).catch(e => { console.error("2h template fetch failed:", e); return []; }),
+            fetch(`${apiConfig.awsApiUrl}/app-settings/sms_template_1h`).then(res => res.json()).catch(e => { console.error("1h template fetch failed:", e); return []; })
           ]);
 
           if (apiKeys[0]?.[0]?.value) currentConfig.textbeeApiKey = apiKeys[0][0].value;
@@ -109,11 +109,16 @@ export function CustomerNotificationsSettings() {
 
       if (!response.ok) throw new Error("Failed to save to backend");
 
+      console.log("[DEBUG] Save Success. Settings updated.");
       setIsDirty(false);
-      toast({ title: "Salvat", description: "Configurația notificărilor a fost actualizată." });
-    } catch (e) {
-      console.error("Save error:", e);
-      toast({ title: "Eroare", description: "Nu s-a putut salva configurația.", variant: "destructive" });
+      toast({ title: "Salvat", description: "Configurația a fost salvată cu succes în baza de date." });
+    } catch (e: any) {
+      console.error("[DEBUG] Full Save Error:", e);
+      toast({
+        title: "Eroare la Salvare",
+        description: `Backend error: ${e.message || 'Unknown error'}. Check console (F12).`,
+        variant: "destructive"
+      });
     }
     setIsSaving(false);
   };
