@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
+# Renew Dental Clinic Management System
 
-## Project info
+A comprehensive web application for managing dental clinic operations, including appointment scheduling, patient records, and automated SMS reminders.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+- **Daily Agenda & Weekly View**: Efficiently manage and visualize clinic schedules.
+- **Patient Management**: Centralized database for patient records and history.
+- **Automated SMS Reminders**: Reliability-tested notification system with 24h, 2h, and 1h alerts.
+- **Secure Authentication**: Role-based access control for clinic staff.
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Frontend**: React, Vite, TypeScript, Tailwind CSS, Radix UI.
+- **Backend**: Node.js, Express, MySQL.
+- **Tools**: node-cron (for reminders), Textbee API (for SMS).
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js & npm
+- MySQL Database
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. **Clone the repository**
+   ```bash
+   git clone <repo-url>
+   cd renewdental-a87f972d
+   ```
 
-Follow these steps:
+2. **Frontend Setup**
+   ```bash
+   npm install
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+3. **Backend Setup**
+   ```bash
+   cd backend
+   npm install
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Running the Application
 
-# Step 3: Install the necessary dependencies.
-npm i
+- **Frontend (Root Level)**:
+  ```bash
+  npm run dev
+  ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+- **Backend (Backend Directory)**:
+  ```bash
+  npm run dev
+  ```
 
-**Edit a file directly in GitHub**
+## Development
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Pushed changes are automatically integrated. For reminder service diagnostics, use `npm run diagnose-reminders` in the backend directory.
