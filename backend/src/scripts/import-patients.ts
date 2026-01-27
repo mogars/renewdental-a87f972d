@@ -4,10 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { query, pool } from '../config/database';
 
 function isPhoneNumber(str: string): boolean {
-    // Phone numbers are usually numerical, might have +, -, (), spaces
-    // But user specifically said "phone is numerical"
-    // Let's check if it's mostly digits
-    return /^[0-9\s\-\+\(\)]+$/.test(str) && /[0-9]/.test(str);
+    // User specified: "anything that start with 07 is a phone number"
+    const cleaned = str.trim();
+    return cleaned.startsWith('07') || cleaned.startsWith('+407') || (cleaned.startsWith('0') && /^[0-9\s\-]+$/.test(cleaned) && cleaned.length >= 10);
 }
 
 function isAlphabetic(str: string): boolean {
