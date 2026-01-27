@@ -132,20 +132,34 @@ const DatabaseConnectionSettings = () => {
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="api-url">Adresă IP / Host Backend</Label>
+              <Label htmlFor="api-url">Server Backend (IP, Host sau URL)</Label>
               <Input
                 id="api-url"
-                value={config.awsApiUrl.replace('http://', '').split(':')[0]}
+                value={config.awsApiUrl}
                 onChange={(e) => {
-                  const host = e.target.value.trim();
-                  // Automatically format as full API URL internally
-                  const formatted = host.includes(':') ? `http://${host}` : `http://${host}:3001`;
+                  const val = e.target.value.trim();
+                  let formatted = val;
+
+                  // If it's just an IP or host (no protocol), and no port, add default http and port
+                  if (val && !val.includes("://")) {
+                    if (!val.includes(":")) {
+                      formatted = `http://${val}:3001`;
+                    } else {
+                      formatted = `http://${val}`;
+                    }
+                  }
+
                   setConfig({ awsApiUrl: formatted });
                 }}
-                placeholder="Ex: 192.168.1.15 sau localhost"
+                placeholder="Ex: 192.168.1.15, localhost sau http://cloud-server.com:3001"
               />
-              <p className="text-xs text-muted-foreground">
-                Introdu adresa IP a serverului Raspberry Pi unde rulează backend-ul.
+              <div className="mt-2 p-2 rounded bg-muted/30 border border-dashed text-[11px] font-mono break-all">
+                <span className="text-muted-foreground mr-1">URL Final:</span>
+                <span className="text-primary">{config.awsApiUrl}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Poți introduce doar IP-ul (ex: 63.180.248.80) sau un URL complet.
+                Dacă introduci doar IP/host, vom folosi automat portul default :3001.
               </p>
             </div>
           </div>
