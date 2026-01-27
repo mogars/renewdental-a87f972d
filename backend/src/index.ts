@@ -10,6 +10,7 @@ import chartRecordsRouter from './routes/chart-records';
 import treatmentTypesRouter from './routes/treatment-types';
 import appSettingsRouter from './routes/app-settings';
 import usersRouter from './routes/users';
+import smsRouter from './routes/sms';
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.use('/chart-records', chartRecordsRouter);
 app.use('/treatment-types', treatmentTypesRouter);
 app.use('/app-settings', appSettingsRouter);
 app.use('/users', usersRouter);
+app.use('/send-sms', smsRouter);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
