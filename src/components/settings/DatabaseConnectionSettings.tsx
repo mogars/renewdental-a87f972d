@@ -9,20 +9,10 @@ import { Loader2, Save, CheckCircle2, XCircle, RefreshCw, Database } from "lucid
 
 interface DatabaseConfig {
   awsApiUrl: string;
-  mysqlHost: string;
-  mysqlPort: string;
-  mysqlDatabase: string;
-  mysqlUser: string;
-  mysqlPassword: string;
 }
 
 const DEFAULT_CONFIG: DatabaseConfig = {
   awsApiUrl: import.meta.env.VITE_AWS_API_URL || "http://localhost:3001",
-  mysqlHost: "localhost",
-  mysqlPort: "3306",
-  mysqlDatabase: "dental_clinic",
-  mysqlUser: "root",
-  mysqlPassword: "",
 };
 
 const STORAGE_KEY = "mysql_database_config";
@@ -72,7 +62,7 @@ const DatabaseConnectionSettings = () => {
     setIsSaving(true);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-      toast({ title: "Salvat", description: "Configurația MySQL a fost salvată local." });
+      toast({ title: "Salvat", description: "Configurația a fost salvată local." });
     } catch {
       toast({ title: "Eroare", description: "Nu s-a putut salva configurația.", variant: "destructive" });
     } finally {
@@ -112,7 +102,7 @@ const DatabaseConnectionSettings = () => {
         <CardContent className="pt-6 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-              Status Conexiune
+              Status Conexiune Backend
             </h4>
             <Button variant="ghost" size="sm" onClick={checkConnection}>
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -124,7 +114,7 @@ const DatabaseConnectionSettings = () => {
             <div className="flex items-center gap-3">
               <Database className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="font-medium text-sm">MySQL Database</p>
+                <p className="font-medium text-sm">Server Backend (Raspberry Pi)</p>
                 <p className="text-xs text-muted-foreground">{config.awsApiUrl}</p>
               </div>
             </div>
@@ -133,16 +123,16 @@ const DatabaseConnectionSettings = () => {
         </CardContent>
       </Card>
 
-      {/* MySQL Configuration */}
+      {/* API Configuration */}
       <Card>
         <CardContent className="pt-6 space-y-4">
           <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-            Configurare MySQL
+            Configurare Conexiune
           </h4>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="api-url">Adresa Bază de Date MySQL (IP/Host)</Label>
+              <Label htmlFor="api-url">Adresă IP / Host Backend</Label>
               <Input
                 id="api-url"
                 value={config.awsApiUrl.replace('http://', '').split(':')[0]}
@@ -150,66 +140,13 @@ const DatabaseConnectionSettings = () => {
                   const host = e.target.value.trim();
                   // Automatically format as full API URL internally
                   const formatted = host.includes(':') ? `http://${host}` : `http://${host}:3001`;
-                  setConfig(prev => ({ ...prev, awsApiUrl: formatted, mysqlHost: host }));
+                  setConfig({ awsApiUrl: formatted });
                 }}
-                placeholder="Ex: 63.180.248.80"
+                placeholder="Ex: 192.168.1.15 sau localhost"
               />
               <p className="text-xs text-muted-foreground">
-                Introdu adresa IP a serverului unde este găzduită baza de date.
+                Introdu adresa IP a serverului Raspberry Pi unde rulează backend-ul.
               </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="mysql-host">Host</Label>
-                <Input
-                  id="mysql-host"
-                  value={config.mysqlHost}
-                  onChange={(e) => setConfig(prev => ({ ...prev, mysqlHost: e.target.value }))}
-                  placeholder="localhost"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="mysql-port">Port</Label>
-                <Input
-                  id="mysql-port"
-                  value={config.mysqlPort}
-                  onChange={(e) => setConfig(prev => ({ ...prev, mysqlPort: e.target.value }))}
-                  placeholder="3306"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mysql-database">Database</Label>
-              <Input
-                id="mysql-database"
-                value={config.mysqlDatabase}
-                onChange={(e) => setConfig(prev => ({ ...prev, mysqlDatabase: e.target.value }))}
-                placeholder="dental_clinic"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mysql-user">User</Label>
-              <Input
-                id="mysql-user"
-                value={config.mysqlUser}
-                onChange={(e) => setConfig(prev => ({ ...prev, mysqlUser: e.target.value }))}
-                placeholder="root"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mysql-password">Password</Label>
-              <Input
-                id="mysql-password"
-                type="password"
-                value={config.mysqlPassword}
-                onChange={(e) => setConfig(prev => ({ ...prev, mysqlPassword: e.target.value }))}
-                placeholder="••••••••"
-              />
             </div>
           </div>
         </CardContent>
