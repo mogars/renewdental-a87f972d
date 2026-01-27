@@ -39,7 +39,9 @@ function formatMessage(template: string, patientName: string, date: string, time
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function processThreshold(
-    thresholdHours: number,
+    thresholdTitle: string,
+    minHours: number,
+    maxHours: number,
     settingKey: string,
     templateKey: string,
     sentFlag: string,
@@ -51,30 +53,33 @@ async function processThreshold(
     const template = await getSetting(templateKey);
     if (!template) return;
 
+    // Sliding Window Logic:
+    // We only find appointments that are currently in the "active slot" for this reminder.
     const sql = `
     SELECT a.*, p.first_name, p.last_name, p.phone
     FROM appointments a
     JOIN patients p ON a.patient_id = p.id
     WHERE a.${sentFlag} = 0
     AND a.status != 'cancelled'
+    AND TIMESTAMP(a.appointment_date, a.start_time) > DATE_ADD(NOW(), INTERVAL ? HOUR)
     AND TIMESTAMP(a.appointment_date, a.start_time) <= DATE_ADD(NOW(), INTERVAL ? HOUR)
-    AND TIMESTAMP(a.appointment_date, a.start_time) > NOW()
   `;
 
-    const appointments = await query(sql, [thresholdHours]);
+    const appointments = await query(sql, [minHours, maxHours]);
+    if (appointments.length > 0) {
+        console.log(`[REMINDER SERVICE] ${thresholdTitle} Window (${minHours}h-${maxHours}h) found ${appointments.length} appointments.`);
+    }
 
     for (let i = 0; i < appointments.length; i++) {
         const app = appointments[i];
 
-        // Add 60s delay starting from the second message in the batch
         if (i > 0) {
             console.log(`[REMINDER SERVICE] Rate limiting: Sleeping for 60s...`);
             await sleep(60000);
         }
 
-        console.log(`[REMINDER SERVICE] Triggering ${thresholdHours}h reminder for ${app.first_name} ${app.last_name}`);
+        console.log(`[REMINDER SERVICE] Triggering ${thresholdTitle} for ${app.first_name} ${app.last_name} (${app.start_time})`);
 
-        // Normalize phone
         let phone = app.phone.replace(/\D/g, '');
         if (phone.startsWith('0')) phone = '+4' + phone;
         else if (!phone.startsWith('+')) phone = '+' + phone;
@@ -94,17 +99,32 @@ async function processThreshold(
 }
 
 async function processReminders() {
+    const dbTimeResult = await queryOne('SELECT NOW() as now');
+    const dbTime = dbTimeResult?.now;
+    const systemTime = new Date().toLocaleString('ro-RO');
+
+    console.log(`[REMINDER SERVICE SCAN] System: ${systemTime} | DB NOW(): ${dbTime}`);
+
     const apiKey = await getSetting('textbee_api_key');
     const deviceId = await getSetting('textbee_device_id');
 
-    if (!apiKey || !deviceId) return;
+    if (!apiKey || !deviceId) {
+        console.warn('[REMINDER SERVICE] Missing Credentials - skipping run');
+        return;
+    }
 
     const creds = { apiKey, deviceId };
 
-    // Run thresholds
-    await processThreshold(24, 'sms_enabled_24h', 'sms_template_24h', 'reminder_sent_24h', creds);
-    await processThreshold(2, 'sms_enabled_2h', 'sms_template_2h', 'reminder_sent_2h', creds);
-    await processThreshold(1, 'sms_enabled_1h', 'sms_template_1h', 'reminder_sent_1h', creds);
+    // Run thresholds with non-overlapping windows
+    // Current Logic:
+    // 1h Reminder = Now to Now+1h
+    // 2h Reminder = Now+1h to Now+2h
+    // 24h Reminder = Now+2h to Now+24h
+    await processThreshold('1h Reminder', 0, 1, 'sms_enabled_1h', 'sms_template_1h', 'reminder_sent_1h', creds);
+    await processThreshold('2h Reminder', 1, 2, 'sms_enabled_2h', 'sms_template_2h', 'reminder_sent_2h', creds);
+    await processThreshold('24h Reminder', 2, 24, 'sms_enabled_24h', 'sms_template_24h', 'reminder_sent_24h', creds);
+
+    console.log(`[REMINDER SERVICE SCAN] Done`);
 }
 
 let isProcessing = false;

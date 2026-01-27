@@ -20,6 +20,7 @@ const poolConfig: PoolOptions = {
   waitForConnections: true,
   connectionLimit: 20,
   queueLimit: 0,
+  timezone: '+02:00', // Align DB 'NOW()' with clinic local time
 };
 
 export const pool: Pool = mysql.createPool(poolConfig);
