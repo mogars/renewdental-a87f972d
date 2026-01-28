@@ -36,16 +36,27 @@ export const PatientCombobox = ({
   const [open, setOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const commandListRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Scroll list to top when search value changes
+  // Debounce search input (150ms delay)
+  useEffect(() => {
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchValue);
+    }, 150);
+
+    return () => clearTimeout(searchTimeoutRef.current);
+  }, [searchValue]);
+
+  // Scroll list to top when debounced search value changes
   useEffect(() => {
     if (commandListRef.current) {
       commandListRef.current.scrollTop = 0;
     }
-  }, [searchValue]);
+  }, [debouncedSearch]);
 
   const selectedPatient = patients.find((patient) => patient.id === value);
 
@@ -104,6 +115,7 @@ export const PatientCombobox = ({
               placeholder="Search patients..."
               value={searchValue}
               onValueChange={setSearchValue}
+              data-search={debouncedSearch}
             />
             <CommandList ref={commandListRef}>
               <CommandEmpty>No patient found.</CommandEmpty>
