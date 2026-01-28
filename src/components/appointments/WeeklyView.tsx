@@ -102,21 +102,46 @@ export const WeeklyView = ({
     });
   };
 
-  const getAppointmentPosition = (startTime: string, endTime: string, index: number, total: number) => {
+  /* 
+   * Deterministic positioning:
+   * Calculate position based on the specific doctor's index in the full list of doctors.
+   * This ensures Dr. A is always in column 1, Dr. B in column 2, etc.
+   */
+  const getAppointmentPosition = (startTime: string, endTime: string, doctorId: string | null) => {
+    // Determine the total number of chunks (columns) based on total doctors
+    // If no doctors loaded yet, default to 1
+    const totalColumns = doctors && doctors.length > 0 ? doctors.length : 1;
+
+    // Find the index of this appointment's doctor
+    let columnIndex = 0;
+    if (doctors && doctorId) {
+      const foundIndex = doctors.findIndex(d => d.id === doctorId);
+      if (foundIndex !== -1) {
+        columnIndex = foundIndex;
+      }
+    } else {
+      // If unassigned or doctor not found, maybe put in the last column or overflow?
+      // For now, let's put unassigned in the last slot if there's space, or 0.
+      // Or strictly: unassigned = 0? Let's stick to 0 for safety if not found.
+      columnIndex = 0;
+      // Better Strategy: If we want to support "Unassigned" as a distinct column, we'd add +1 to totalColumns.
+      // But user asked for "each doctor sets his appointment in the same slice", suggesting defined columns.
+      // We'll place unknown/unassigned in the first column (0) overlapping, or we could handle them separately.
+    }
+
     const [startHour, startMin] = startTime.split(":").map(Number);
     const [endHour, endMin] = endTime.split(":").map(Number);
     const startOffset = (startMin / 60) * 100;
     const duration = (endHour - startHour) * 60 + (endMin - startMin);
     const height = (duration / 60) * 100;
 
-    // Calculate width and position for side-by-side display
-    const width = total > 1 ? 100 / total : 100;
-    const left = index * width;
+    const width = 100 / totalColumns;
+    const left = columnIndex * width;
 
     return {
       top: `${startOffset}%`,
       height: `${Math.max(height, 50)}%`,
-      width: `${width - 1}%`,
+      width: `${width}%`, // Use full width of the slice
       left: `${left}%`
     };
   };
@@ -201,7 +226,6 @@ export const WeeklyView = ({
               {days.map((day) => {
                 const hourAppointments = getAppointmentsForDayAndHour(day, hour);
                 const isToday = isSameDay(day, new Date());
-                const totalAppointments = hourAppointments.length;
 
                 const formattedHour = hour.toString().padStart(2, '0') + ':00';
 
@@ -219,7 +243,7 @@ export const WeeklyView = ({
                       size="icon"
                       className={cn(
                         "absolute right-1 top-1 z-30 h-5 w-5 transition-opacity bg-background/80 hover:bg-background shadow-sm",
-                        totalAppointments > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                        hourAppointments.length > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                       )}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -229,8 +253,9 @@ export const WeeklyView = ({
                       <Plus className="h-3 w-3" />
                     </Button>
 
-                    {hourAppointments.map((apt, index) => {
-                      const position = getAppointmentPosition(apt.start_time, apt.end_time, index, totalAppointments);
+                    {hourAppointments.map((apt) => {
+                      // Pass doctor_id to calculate deterministic position
+                      const position = getAppointmentPosition(apt.start_time, apt.end_time, apt.doctor_id);
                       const appointmentColors = getAppointmentColor(apt);
                       const doctorName = getDoctorName(apt.doctor_id);
 
@@ -254,7 +279,7 @@ export const WeeklyView = ({
                           <div className="font-medium truncate">
                             {apt.patients?.first_name} {apt.patients?.last_name?.charAt(0)}.
                           </div>
-                          {totalAppointments > 1 && doctorName && (
+                          {doctors && doctors.length > 1 && doctorName && (
                             <div className="text-[9px] font-semibold opacity-90 truncate">
                               {doctorName}
                             </div>
