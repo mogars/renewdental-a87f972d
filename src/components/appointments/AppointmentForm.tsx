@@ -259,7 +259,20 @@ export const AppointmentForm = ({
 
   const isLoading = createAppointment.isPending || updateAppointment.isPending;
 
+  // Generate time slots (00:00 to 23:45 in 15 min increments)
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let i = 0; i < 24; i++) {
+      for (let j = 0; j < 60; j += 15) {
+        const hour = i.toString().padStart(2, "0");
+        const minute = j.toString().padStart(2, "0");
+        slots.push(`${hour}:${minute}`);
+      }
+    }
+    return slots;
+  };
 
+  const timeSlots = generateTimeSlots();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -336,23 +349,39 @@ export const AppointmentForm = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startTime">Start Time *</Label>
-              <Input
-                id="startTime"
-                type="time"
+              <Select
                 value={formData.startTime}
-                onChange={(e) => handleStartTimeChange(e.target.value)}
-                required
-              />
+                onValueChange={handleStartTimeChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select start time" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  {timeSlots.map((time) => (
+                    <SelectItem key={`start-${time}`} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="endTime">End Time *</Label>
-              <Input
-                id="endTime"
-                type="time"
+              <Select
                 value={formData.endTime}
-                onChange={(e) => setFormData((prev) => ({ ...prev, endTime: e.target.value }))}
-                required
-              />
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, endTime: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select end time" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  {timeSlots.map((time) => (
+                    <SelectItem key={`end-${time}`} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
