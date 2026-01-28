@@ -107,7 +107,8 @@ export const WeeklyView = ({
     // Process each day separately
     days.forEach((day) => {
       const dayApts = appointments
-        .filter((apt) => isSameDay(parseISO(apt.appointment_date), day))
+        .filter((apt) => apt.appointment_date && isSameDay(parseISO(apt.appointment_date), day))
+        .filter((apt) => apt.start_time && apt.end_time)
         .map((apt) => ({ ...apt, startMin: toMinutes(apt.start_time), endMin: toMinutes(apt.end_time) }))
         .sort((a, b) => a.startMin - b.startMin);
 
@@ -261,8 +262,10 @@ export const WeeklyView = ({
               {days.map((day) => {
                 const isToday = isSameDay(day, new Date());
 
-                const dayAppointments = appointments.filter((apt) => isSameDay(parseISO(apt.appointment_date), day));
-                const hourAppointments = dayAppointments.filter((apt) => parseInt(apt.start_time.split(":")[0], 10) === hour);
+                const dayAppointments = appointments.filter((apt) => apt.appointment_date && isSameDay(parseISO(apt.appointment_date), day));
+                const hourAppointments = dayAppointments.filter((apt) => apt.start_time && parseInt(apt.start_time.split(":")[0], 10) === hour);
+
+                const totalAppointments = hourAppointments.length;
 
                 const formattedHour = hour.toString().padStart(2, '0') + ':00';
 
