@@ -14,6 +14,7 @@ import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { PatientCombobox } from "./PatientCombobox";
+import { MultiSelect } from "@/components/ui/multi-select";
 import type { Patient, Doctor, TreatmentType, AppointmentWithPatient, Appointment, ChartRecord } from "@/types/database";
 
 interface AppointmentFormProps {
@@ -47,7 +48,7 @@ export const AppointmentForm = ({
     date: selectedDate,
     startTime: "09:00",
     endTime: "10:00",
-    treatmentType: "",
+    treatmentTypes: [] as string[], // Changed to array
     doctorId: "",
     notes: "",
     status: "scheduled",
@@ -79,22 +80,37 @@ export const AppointmentForm = ({
   };
 
   // Handle treatment type change - auto-calculate end time
-  const handleTreatmentTypeChange = (treatmentName: string) => {
-    const selectedType = treatmentTypes?.find(t => t.name === treatmentName);
-    const duration = selectedType?.duration_minutes || 60;
-    const newEndTime = calculateEndTime(formData.startTime, duration);
+  const handleTreatmentTypeChange = (selectedNames: string[]) => {
+    // Calculate total duration
+    let totalDuration = 0;
+    selectedNames.forEach(name => {
+      const type = treatmentTypes?.find(t => t.name === name);
+      if (type) totalDuration += type.duration_minutes;
+    });
+
+    // Default to 60 min if nothing selected
+    if (totalDuration === 0) totalDuration = 60;
+
+    const newEndTime = calculateEndTime(formData.startTime, totalDuration);
+
     setFormData(prev => ({
       ...prev,
-      treatmentType: treatmentName,
+      treatmentTypes: selectedNames,
       endTime: newEndTime,
     }));
   };
 
-  // Handle start time change - recalculate end time based on selected treatment
+  // Handle start time change - recalculate end time based on selected treatments
   const handleStartTimeChange = (newStartTime: string) => {
-    const selectedType = treatmentTypes?.find(t => t.name === formData.treatmentType);
-    const duration = selectedType?.duration_minutes || 60;
-    const newEndTime = calculateEndTime(newStartTime, duration);
+    let totalDuration = 0;
+    formData.treatmentTypes.forEach(name => {
+      const type = treatmentTypes?.find(t => t.name === name);
+      if (type) totalDuration += type.duration_minutes;
+    });
+
+    if (totalDuration === 0) totalDuration = 60;
+
+    const newEndTime = calculateEndTime(newStartTime, totalDuration);
     setFormData(prev => ({
       ...prev,
       startTime: newStartTime,
@@ -109,7 +125,7 @@ export const AppointmentForm = ({
         date: new Date(editingAppointment.appointment_date),
         startTime: editingAppointment.start_time.slice(0, 5),
         endTime: editingAppointment.end_time.slice(0, 5),
-        treatmentType: editingAppointment.treatment_type || "",
+        treatmentTypes: editingAppointment.treatment_type ? editingAppointment.treatment_type.split(',').map(s => s.trim()) : [],
         doctorId: editingAppointment.doctor_id || "",
         notes: editingAppointment.notes || "",
         status: editingAppointment.status || "scheduled",
@@ -127,7 +143,7 @@ export const AppointmentForm = ({
         date: selectedDate,
         startTime: startTime,
         endTime: endTime,
-        treatmentType: "",
+        treatmentTypes: [],
         doctorId: "",
         notes: "",
         status: "scheduled",
@@ -142,13 +158,16 @@ export const AppointmentForm = ({
       const appointmentDate = format(formData.date, "yyyy-MM-dd");
 
       // Create appointment
+      const treatmentTypeString = formData.treatmentTypes.join(", ");
+
+      // Create appointment
       await apiPost<Appointment>("/appointments", {
         patient_id: formData.patientId,
-        title: formData.treatmentType,
+        title: treatmentTypeString || "Appointment",
         appointment_date: appointmentDate,
         start_time: formData.startTime,
         end_time: formData.endTime,
-        treatment_type: formData.treatmentType,
+        treatment_type: treatmentTypeString,
         doctor_id: formData.doctorId || null,
         dentist_name: dentistName,
         notes: formData.notes || null,
@@ -159,7 +178,7 @@ export const AppointmentForm = ({
       await apiPost<ChartRecord>("/chart-records", {
         patient_id: formData.patientId,
         record_date: appointmentDate,
-        treatment_type: formData.treatmentType,
+        treatment_type: treatmentTypeString,
         description: formData.notes || null,
         dentist_name: dentistName,
         status: formData.status === "completed" ? "completed" : "scheduled",
@@ -193,13 +212,16 @@ export const AppointmentForm = ({
       const newAppointmentDate = format(formData.date, "yyyy-MM-dd");
 
       // Update appointment
+      const treatmentTypeString = formData.treatmentTypes.join(", ");
+
+      // Update appointment
       await apiPut<Appointment>(`/appointments/${editingAppointmentId}`, {
         patient_id: formData.patientId,
-        title: formData.treatmentType,
+        title: treatmentTypeString || "Appointment",
         appointment_date: newAppointmentDate,
         start_time: formData.startTime,
         end_time: formData.endTime,
-        treatment_type: formData.treatmentType,
+        treatment_type: treatmentTypeString,
         doctor_id: formData.doctorId || null,
         dentist_name: dentistName,
         notes: formData.notes || null,
@@ -295,28 +317,12 @@ export const AppointmentForm = ({
 
           <div className="space-y-2">
             <Label>Treatment Type *</Label>
-            <Select
-              value={formData.treatmentType}
-              onValueChange={handleTreatmentTypeChange}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selectează tipul de tratament" />
-              </SelectTrigger>
-              <SelectContent>
-                {treatmentTypes && treatmentTypes.length > 0 ? (
-                  treatmentTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.name}>
-                      {type.name} ({type.duration_minutes} min)
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="no-types" disabled>
-                    Nu există tipuri de tratament. Adaugă din Setări.
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              options={treatmentTypes?.map(t => ({ label: `${t.name} (${t.duration_minutes} min)`, value: t.name })) || []}
+              selected={formData.treatmentTypes}
+              onChange={handleTreatmentTypeChange}
+              placeholder="Select treatments..."
+            />
           </div>
 
           <div className="space-y-2">
