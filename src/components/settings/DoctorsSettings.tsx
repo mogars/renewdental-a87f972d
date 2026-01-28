@@ -61,6 +61,7 @@ export const DoctorsSettings = () => {
         specialty: formData.specialty || null,
         phone: formData.phone || null,
         email: formData.email || null,
+        is_active: editingDoctor.is_active,
       });
     },
     onSuccess: () => {
