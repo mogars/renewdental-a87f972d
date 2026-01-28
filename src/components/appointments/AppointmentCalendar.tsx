@@ -46,11 +46,12 @@ export const AppointmentCalendar = ({
   }, [calendarSettings, hasInitializedView, isMobile]);
 
   // Auto-switch to day view on mobile for better UX
-  useEffect(() => {
-    if (isMobile && view === "week") {
-      setView("day");
-    }
-  }, [isMobile, view]);
+  // Commented out to allow users to choose their preferred view
+  // useEffect(() => {
+  //   if (isMobile && view === "week") {
+  //     setView("day");
+  //   }
+  // }, [isMobile, view]);
 
   // Fetch doctors for the filter dropdown
   const { data: doctors } = useQuery({
