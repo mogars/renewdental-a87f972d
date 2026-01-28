@@ -133,8 +133,10 @@ async function processReminders() {
 }
 
 let isProcessing = false;
+let isInitialized = false;
 
 export const initReminderService = () => {
+    isInitialized = true;
     // Run every 5 minutes to accommodate the 60s delay per message and prevent overlaps
     cron.schedule('*/5 * * * *', async () => {
         if (isProcessing) {
@@ -153,3 +155,5 @@ export const initReminderService = () => {
     });
     console.log('✓ Automated SMS Reminder service initialized (Interval: 5m)');
 };
+
+export const getReminderServiceStatus = () => ({ initialized: isInitialized, isProcessing });

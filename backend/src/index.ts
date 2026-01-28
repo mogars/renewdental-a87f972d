@@ -11,7 +11,7 @@ import treatmentTypesRouter from './routes/treatment-types';
 import appSettingsRouter from './routes/app-settings';
 import usersRouter from './routes/users';
 import smsRouter from './routes/sms';
-import { initReminderService } from './services/reminder-service';
+import { initReminderService, getReminderServiceStatus } from './services/reminder-service';
 
 dotenv.config();
 
@@ -36,7 +36,8 @@ app.use(cors({
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+  const reminderStatus = getReminderServiceStatus();
+  res.json({ status: 'healthy', timestamp: new Date().toISOString(), reminderService: reminderStatus });
 });
 
 // API Routes (no /api prefix to match frontend expectations)
@@ -62,6 +63,8 @@ app.use((req, res) => {
 
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
+  // Start automated reminder service (runs cron jobs)
+  initReminderService();
 });
 
 export default app;
