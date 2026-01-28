@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Card, CardContent } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/services/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Clock, User, Phone, Mail, FileText, MessageSquare, Loader2, Bell } from "lucide-react";
+import { Plus, Clock, User, Phone, Mail, FileText, MessageSquare, Loader2, Bell, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { config } from "@/config/api";
-import type { AppointmentWithPatient } from "@/types/database";
+import type { AppointmentWithPatient, Office } from "@/types/database";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DailyAgendaProps {
@@ -26,9 +28,13 @@ export const DailyAgenda = ({
   const { toast } = useToast();
   const [sendingSmsFor, setSendingSmsFor] = useState<string | null>(null);
 
-  const sortedAppointments = [...appointments].sort((a, b) =>
-    a.start_time.localeCompare(b.start_time)
-  );
+  // Fetch active offices
+  const { data: offices } = useQuery({
+    queryKey: ["offices", "active"],
+    queryFn: async () => {
+      return apiGet<Office[]>("/offices");
+    },
+  });
 
   const sendImmediateSms = async (e: React.MouseEvent, appointmentId: string) => {
     e.stopPropagation();
@@ -144,6 +150,185 @@ export const DailyAgenda = ({
     );
   };
 
+  const renderAppointmentCard = (apt: AppointmentWithPatient) => (
+    <Card
+      key={apt.id}
+      className={cn(
+        "cursor-pointer transition-all hover:shadow-card-hover",
+        apt.status === "cancelled" && "opacity-60"
+      )}
+      onClick={() => onEditAppointment(apt.id)}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="flex flex-col items-center rounded-lg bg-muted px-3 py-2">
+              <span className="text-lg font-semibold text-foreground">
+                {apt.start_time.slice(0, 5)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {apt.end_time.slice(0, 5)}
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <h4 className="font-semibold text-foreground">{apt.title}</h4>
+
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <User className="h-3.5 w-3.5" />
+                <span>
+                  {apt.patients
+                    ? `${apt.patients.first_name} ${apt.patients.last_name}`
+                    : "No patient"}
+                </span>
+              </div>
+
+              {apt.patients?.phone && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Phone className="h-3.5 w-3.5" />
+                  <span>{apt.patients.phone}</span>
+                </div>
+              )}
+
+              {apt.patients?.email && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Mail className="h-3.5 w-3.5" />
+                  <span>{apt.patients.email}</span>
+                </div>
+              )}
+
+              {apt.notes && (
+                <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <FileText className="mt-0.5 h-3.5 w-3.5" />
+                  <span className="line-clamp-2">{apt.notes}</span>
+                </div>
+              )}
+
+              <NotificationStatus apt={apt} />
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end gap-2">
+            {getStatusBadge(apt.status)}
+            {apt.treatment_type && (
+              <Badge variant="outline">{apt.treatment_type}</Badge>
+            )}
+            {apt.patients?.phone && apt.status === "scheduled" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  sendImmediateSms(e, apt.id);
+                }}
+                disabled={sendingSmsFor === apt.id}
+              >
+                {sendingSmsFor === apt.id ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <MessageSquare className="h-3 w-3" />
+                )}
+                Send SMS
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderColumn = (office: Office | null, officeAppointments: AppointmentWithPatient[]) => {
+    const sortedOfficeAppointments = [...officeAppointments].sort((a, b) =>
+      a.start_time.localeCompare(b.start_time)
+    );
+
+    return (
+      <div className="flex-1 min-w-[300px] flex flex-col gap-4">
+        {office && (
+          <div className="flex items-center gap-2 pb-2 border-b border-border">
+            <Building className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-lg">{office.name}</h3>
+            <Badge variant="secondary" className="ml-auto">
+              {officeAppointments.length}
+            </Badge>
+          </div>
+        )}
+        <div className="space-y-3">
+          {sortedOfficeAppointments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm border border-dashed rounded-lg">
+              No appointments
+            </div>
+          ) : (
+            sortedOfficeAppointments.map(renderAppointmentCard)
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // If we have offices, show split view
+  if (offices && offices.length > 0) {
+    // Group appointments by office
+    const appointmentsByOffice: Record<string, AppointmentWithPatient[]> = {};
+    const unassignedAppointments: AppointmentWithPatient[] = [];
+
+    // Initialize arrays for each office
+    offices.forEach(office => {
+      appointmentsByOffice[office.id] = [];
+    });
+
+    // Distribute appointments
+    appointments.forEach(apt => {
+      if (apt.office_id && appointmentsByOffice[apt.office_id]) {
+        appointmentsByOffice[apt.office_id].push(apt);
+      } else if (!apt.office_id) {
+        unassignedAppointments.push(apt);
+      }
+    });
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Total: {appointments.length} appointment{appointments.length !== 1 ? "s" : ""}
+          </p>
+          <Button variant="outline" size="sm" onClick={onAddAppointment}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Appointment
+          </Button>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-6 overflow-x-auto pb-4">
+          {offices.map(office => (
+            <div key={office.id} className="flex-1">
+              {renderColumn(office, appointmentsByOffice[office.id])}
+            </div>
+          ))}
+
+          {unassignedAppointments.length > 0 && (
+            <div className="flex-1 border-l pl-6 border-dashed border-yellow-200 bg-yellow-50/30 rounded-r-lg">
+              <div className="flex items-center gap-2 pb-2 border-b border-border mb-4">
+                <span className="text-yellow-600 font-semibold">Unassigned</span>
+                <Badge variant="secondary" className="ml-auto bg-yellow-100 text-yellow-800">
+                  {unassignedAppointments.length}
+                </Badge>
+              </div>
+              <div className="space-y-3">
+                {unassignedAppointments.map(renderAppointmentCard)}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback to legacy single column view if no offices defined
+  const sortedAppointments = [...appointments].sort((a, b) =>
+    a.start_time.localeCompare(b.start_time)
+  );
+
   return (
     <div className="space-y-4">
       {sortedAppointments.length === 0 ? (
@@ -173,93 +358,7 @@ export const DailyAgenda = ({
           </div>
 
           <div className="space-y-3">
-            {sortedAppointments.map((apt) => (
-              <Card
-                key={apt.id}
-                className={cn(
-                  "cursor-pointer transition-all hover:shadow-card-hover",
-                  apt.status === "cancelled" && "opacity-60"
-                )}
-                onClick={() => onEditAppointment(apt.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="flex flex-col items-center rounded-lg bg-muted px-3 py-2">
-                        <span className="text-lg font-semibold text-foreground">
-                          {apt.start_time.slice(0, 5)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {apt.end_time.slice(0, 5)}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="font-semibold text-foreground">{apt.title}</h4>
-
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <User className="h-3.5 w-3.5" />
-                          <span>
-                            {apt.patients
-                              ? `${apt.patients.first_name} ${apt.patients.last_name}`
-                              : "No patient"}
-                          </span>
-                        </div>
-
-                        {apt.patients?.phone && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Phone className="h-3.5 w-3.5" />
-                            <span>{apt.patients.phone}</span>
-                          </div>
-                        )}
-
-                        {apt.patients?.email && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Mail className="h-3.5 w-3.5" />
-                            <span>{apt.patients.email}</span>
-                          </div>
-                        )}
-
-                        {apt.notes && (
-                          <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                            <FileText className="mt-0.5 h-3.5 w-3.5" />
-                            <span className="line-clamp-2">{apt.notes}</span>
-                          </div>
-                        )}
-
-                        <NotificationStatus apt={apt} />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                      {getStatusBadge(apt.status)}
-                      {apt.treatment_type && (
-                        <Badge variant="outline">{apt.treatment_type}</Badge>
-                      )}
-                      {apt.patients?.phone && apt.status === "scheduled" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 gap-1 text-xs"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            sendImmediateSms(e, apt.id);
-                          }}
-                          disabled={sendingSmsFor === apt.id}
-                        >
-                          {sendingSmsFor === apt.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <MessageSquare className="h-3 w-3" />
-                          )}
-                          Send SMS
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {sortedAppointments.map(renderAppointmentCard)}
           </div>
         </>
       )}

@@ -54,6 +54,7 @@ export interface AppointmentWithPatient extends Appointment {
     phone: string | null;
     email: string | null;
   } | null;
+  offices?: Office | null;
 }
 
 export interface Doctor {
@@ -66,6 +67,45 @@ export interface Doctor {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface Office {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Appointment {
+  id: string;
+  patient_id: string;
+  doctor_id: string | null;
+  office_id: string | null;
+  title: string;
+  appointment_date: string;
+  start_time: string;
+  end_time: string;
+  status: string | null;
+  notes: string | null;
+  treatment_type: string | null;
+  dentist_name: string | null;
+  google_event_id: string | null;
+  reminder_sent_24h: boolean;
+  reminder_sent_2h: boolean;
+  reminder_sent_1h: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined relations
+  patients?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    phone: string | null;
+    email: string | null;
+  } | null;
+  doctors?: Doctor | null;
+  offices?: Office | null;
 }
 
 export interface ChartRecord {
