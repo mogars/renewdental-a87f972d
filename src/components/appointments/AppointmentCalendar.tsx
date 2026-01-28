@@ -12,7 +12,7 @@ import { DailyAgenda } from "./DailyAgenda";
 import { WeeklyView } from "./WeeklyView";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCalendarSettings } from "@/hooks/useCalendarSettings";
-import type { AppointmentWithPatient, Doctor, Office } from "@/types/database";
+import type { AppointmentWithPatient, Doctor } from "@/types/database";
 
 interface AppointmentCalendarProps {
   appointments: AppointmentWithPatient[];
@@ -57,14 +57,6 @@ export const AppointmentCalendar = ({
     queryKey: ["doctors"],
     queryFn: async () => {
       return apiGet<Doctor[]>("/doctors");
-    },
-  });
-
-  // Fetch active offices
-  const { data: offices } = useQuery({
-    queryKey: ["offices", "active"],
-    queryFn: async () => {
-      return apiGet<Office[]>("/offices");
     },
   });
 
@@ -268,104 +260,30 @@ export const AppointmentCalendar = ({
                         <Plus className="h-3 w-3" />
                       </Button>
                     </div>
-
-                    {/* Horizontal Split for Offices */}
-                    <div className="flex flex-col flex-1 mt-1 border-t border-border/50">
-                      {offices && offices.length > 0 ? (
-                        offices.map((office, officeIndex) => {
-                          // Filter appointments for this office
-                          const officeAppointments = dayAppointments.filter(apt => apt.office_id === office.id);
-
-                          return (
-                            <div
-                              key={office.id}
-                              className={cn(
-                                "flex-1 min-h-[40px] p-0.5",
-                                officeIndex !== offices.length - 1 && "border-b border-border/50 border-dashed"
-                              )}
-                            >
-                              {/* Office Label (Optional/Subtle) */}
-                              <div className="text-[9px] text-muted-foreground font-mono px-1 opacity-50 mb-0.5">
-                                {office.name}
-                              </div>
-
-                              <div className="space-y-0.5">
-                                {officeAppointments.slice(0, 2).map((apt) => (
-                                  <button
-                                    key={apt.id}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onEditAppointment(apt.id);
-                                    }}
-                                    className={cn(
-                                      "w-full truncate rounded px-1 sm:px-1.5 py-0.5 text-left text-[10px] sm:text-xs transition-colors",
-                                      apt.status === "completed"
-                                        ? "bg-success/20 text-success hover:bg-success/30"
-                                        : apt.status === "cancelled"
-                                          ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
-                                          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                                    )}
-                                  >
-                                    {isMobile ? apt.start_time.slice(0, 5) : `${apt.start_time.slice(0, 5)} ${apt.patients?.first_name}`}
-                                  </button>
-                                ))}
-                                {officeAppointments.length > 2 && (
-                                  <span className="block text-[9px] text-muted-foreground px-1">
-                                    +{officeAppointments.length - 2}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        // Fallback implementation if no offices
-                        <div className="mt-0.5 sm:mt-1 space-y-0.5 sm:space-y-1">
-                          {dayAppointments.slice(0, isMobile ? 2 : 3).map((apt) => (
-                            <button
-                              key={apt.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEditAppointment(apt.id);
-                              }}
-                              className={cn(
-                                "w-full truncate rounded px-1 sm:px-1.5 py-0.5 text-left text-[10px] sm:text-xs transition-colors",
-                                apt.status === "completed"
-                                  ? "bg-success/20 text-success hover:bg-success/30"
-                                  : apt.status === "cancelled"
-                                    ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
-                                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                              )}
-                            >
-                              {isMobile ? apt.start_time.slice(0, 5) : `${apt.start_time.slice(0, 5)} ${apt.patients?.first_name}`}
-                            </button>
-                          ))}
-                          {dayAppointments.length > 3 && (
-                            <span className="block text-xs text-muted-foreground">
-                              +{dayAppointments.length - 3} more
-                            </span>
+                    <div className="mt-0.5 sm:mt-1 space-y-0.5 sm:space-y-1">
+                      {dayAppointments.slice(0, isMobile ? 2 : 3).map((apt) => (
+                        <button
+                          key={apt.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditAppointment(apt.id);
+                          }}
+                          className={cn(
+                            "w-full truncate rounded px-1 sm:px-1.5 py-0.5 text-left text-[10px] sm:text-xs transition-colors",
+                            apt.status === "completed"
+                              ? "bg-success/20 text-success hover:bg-success/30"
+                              : apt.status === "cancelled"
+                                ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
+                                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                           )}
-                        </div>
-                      )}
-
-                      {/* Show Unassigned Appointments if Offices exist */}
-                      {offices && offices.length > 0 && dayAppointments.some(apt => !apt.office_id) && (
-                        <div className="border-t border-border/50 border-dashed p-0.5 bg-yellow-50/20">
-                          <div className="space-y-0.5">
-                            {dayAppointments.filter(apt => !apt.office_id).map((apt) => (
-                              <button
-                                key={apt.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEditAppointment(apt.id);
-                                }}
-                                className="w-full truncate rounded px-1 py-0.5 text-left text-[10px] bg-yellow-100 text-yellow-800 opacity-80 hover:opacity-100"
-                              >
-                                ? {apt.start_time.slice(0, 5)} {apt.patients?.first_name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        >
+                          {isMobile ? apt.start_time.slice(0, 5) : `${apt.start_time.slice(0, 5)} ${apt.patients?.first_name}`}
+                        </button>
+                      ))}
+                      {dayAppointments.length > 3 && (
+                        <span className="block text-xs text-muted-foreground">
+                          +{dayAppointments.length - 3} more
+                        </span>
                       )}
                     </div>
                   </div>
@@ -391,6 +309,6 @@ export const AppointmentCalendar = ({
           />
         )}
       </CardContent>
-    </Card >
+    </Card>
   );
 };
