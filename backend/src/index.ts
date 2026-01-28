@@ -11,7 +11,6 @@ import treatmentTypesRouter from './routes/treatment-types';
 import appSettingsRouter from './routes/app-settings';
 import usersRouter from './routes/users';
 import smsRouter from './routes/sms';
-import officesRouter from './routes/offices';
 import { initReminderService } from './services/reminder-service';
 
 dotenv.config();
@@ -49,7 +48,6 @@ app.use('/treatment-types', treatmentTypesRouter);
 app.use('/app-settings', appSettingsRouter);
 app.use('/users', usersRouter);
 app.use('/send-sms', smsRouter);
-app.use('/offices', officesRouter);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
