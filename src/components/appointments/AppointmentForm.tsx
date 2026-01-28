@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { apiGet, apiPost, apiPut, apiDelete } from "@/services/api";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
+import { CalendarIcon, Loader2, Trash2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { PatientCombobox } from "./PatientCombobox";
@@ -38,6 +39,7 @@ export const AppointmentForm = ({
 }: AppointmentFormProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const editingAppointment = editingAppointmentId
     ? appointments.find((apt) => apt.id === editingAppointmentId)
@@ -462,6 +464,19 @@ export const AppointmentForm = ({
                   <Trash2 className="mr-2 h-4 w-4" />
                 )}
                 Delete
+              </Button>
+            )}
+            {editingAppointmentId && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate(`/patients/${formData.patientId}`);
+                }}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Go to Chart
               </Button>
             )}
             <div className="flex-1" />
