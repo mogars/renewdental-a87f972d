@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Check, ChevronsUpDown, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -35,8 +35,17 @@ export const PatientCombobox = ({
 }: PatientComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const commandListRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Scroll list to top when search value changes
+  useEffect(() => {
+    if (commandListRef.current) {
+      commandListRef.current.scrollTop = 0;
+    }
+  }, [searchValue]);
 
   const selectedPatient = patients.find((patient) => patient.id === value);
 
@@ -91,8 +100,12 @@ export const PatientCombobox = ({
         </PopoverTrigger>
         <PopoverContent className="w-[400px] p-0" align="start">
           <Command>
-            <CommandInput placeholder="Search patients..." />
-            <CommandList>
+            <CommandInput
+              placeholder="Search patients..."
+              value={searchValue}
+              onValueChange={setSearchValue}
+            />
+            <CommandList ref={commandListRef}>
               <CommandEmpty>No patient found.</CommandEmpty>
               <CommandGroup>
                 {patients.map((patient) => (
