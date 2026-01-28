@@ -233,12 +233,12 @@ export const WeeklyView = ({
                   isToday && "bg-primary/10"
                 )}
               >
-                <div className="text-xs font-medium text-muted-foreground">
+                <div className="text-xs font-medium text-muted-foreground sm:text-sm">
                   {format(day, "EEE")}
                 </div>
                 <div
                   className={cn(
-                    "mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold",
+                    "mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold sm:h-8 sm:w-8 sm:text-sm",
                     isToday && "bg-primary text-primary-foreground"
                   )}
                 >
@@ -256,7 +256,7 @@ export const WeeklyView = ({
               key={hour}
               className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-border"
             >
-              <div className="border-r border-border p-2 text-right text-xs text-muted-foreground">
+              <div className="border-r border-border p-1 text-right text-[10px] text-muted-foreground sm:p-2 sm:text-xs">
                 {format(new Date().setHours(hour, 0), "HH:mm")}
               </div>
               {days.map((day) => {
@@ -273,7 +273,7 @@ export const WeeklyView = ({
                   <div
                     key={`${day.toISOString()}-${hour}`}
                     className={cn(
-                      "group relative h-16 border-r border-border last:border-r-0 cursor-pointer hover:bg-muted/50 transition-colors",
+                      "group relative h-12 border-r border-border last:border-r-0 cursor-pointer hover:bg-muted/50 transition-colors sm:h-16",
                       isToday && "bg-primary/5"
                     )}
                     onClick={() => onAddAppointment(day, formattedHour)}
@@ -308,13 +308,13 @@ export const WeeklyView = ({
                           }}
                           style={position}
                           className={cn(
-                            "absolute overflow-hidden rounded-r px-1.5 py-0.5 text-left text-xs transition-all hover:z-20 hover:shadow-md border-l-2",
+                            "absolute overflow-hidden rounded-r px-0.5 py-0.5 text-left text-[10px] transition-all hover:z-20 hover:shadow-md border-l-2 sm:px-1.5 sm:text-xs",
                             apt.status === "completed"
                               ? "bg-success/20 text-success border-l-success hover:bg-success/30"
                               : apt.status === "cancelled"
                                 ? "bg-destructive/20 text-destructive border-l-destructive hover:bg-destructive/30"
                                 : cn(appointmentColors.bg, appointmentColors.text, appointmentColors.border)
-                          )}
+                          )}}
                         >
                           <div className="font-medium truncate">
                             {apt.patients?.first_name} {apt.patients?.last_name?.charAt(0)}.

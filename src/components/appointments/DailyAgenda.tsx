@@ -182,11 +182,11 @@ export const DailyAgenda = ({
                 )}
                 onClick={() => onEditAppointment(apt.id)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="flex flex-col items-center rounded-lg bg-muted px-3 py-2">
-                        <span className="text-lg font-semibold text-foreground">
+                <CardContent className="p-2 sm:p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-2 sm:gap-4">
+                      <div className="flex flex-col items-center rounded-lg bg-muted px-2 py-1 sm:px-3 sm:py-2">
+                        <span className="text-base font-semibold text-foreground sm:text-lg">
                           {apt.start_time.slice(0, 5)}
                         </span>
                         <span className="text-xs text-muted-foreground">
@@ -195,11 +195,11 @@ export const DailyAgenda = ({
                       </div>
 
                       <div className="space-y-1">
-                        <h4 className="font-semibold text-foreground">{apt.title}</h4>
+                        <h4 className="text-sm font-semibold text-foreground sm:text-base">{apt.title}</h4>
 
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <User className="h-3.5 w-3.5" />
-                          <span>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground sm:text-sm">
+                          <User className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                          <span className="line-clamp-1">
                             {apt.patients
                               ? `${apt.patients.first_name} ${apt.patients.last_name}`
                               : "No patient"}
@@ -207,23 +207,23 @@ export const DailyAgenda = ({
                         </div>
 
                         {apt.patients?.phone && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Phone className="h-3.5 w-3.5" />
-                            <span>{apt.patients.phone}</span>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground sm:text-sm">
+                            <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                            <span className="line-clamp-1">{apt.patients.phone}</span>
                           </div>
                         )}
 
                         {apt.patients?.email && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Mail className="h-3.5 w-3.5" />
-                            <span>{apt.patients.email}</span>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground sm:text-sm">
+                            <Mail className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                            <span className="line-clamp-1">{apt.patients.email}</span>
                           </div>
                         )}
 
                         {apt.notes && (
-                          <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                            <FileText className="mt-0.5 h-3.5 w-3.5" />
-                            <span className="line-clamp-2">{apt.notes}</span>
+                          <div className="flex items-start gap-2 text-xs text-muted-foreground sm:text-sm">
+                            <FileText className="mt-0.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                            <span className="line-clamp-1 sm:line-clamp-2">{apt.notes}</span>
                           </div>
                         )}
 
@@ -231,16 +231,16 @@ export const DailyAgenda = ({
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-end gap-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
                       {getStatusBadge(apt.status)}
                       {apt.treatment_type && (
-                        <Badge variant="outline">{apt.treatment_type}</Badge>
+                        <Badge variant="outline" className="text-xs">{apt.treatment_type}</Badge>
                       )}
                       {apt.patients?.phone && apt.status === "scheduled" && (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-7 gap-1 text-xs"
+                          className="h-6 gap-1 text-xs sm:h-7"
                           onClick={(e) => {
                             e.stopPropagation();
                             sendImmediateSms(e, apt.id);
@@ -248,11 +248,11 @@ export const DailyAgenda = ({
                           disabled={sendingSmsFor === apt.id}
                         >
                           {sendingSmsFor === apt.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <Loader2 className="h-2.5 w-2.5 animate-spin" />
                           ) : (
-                            <MessageSquare className="h-3 w-3" />
+                            <MessageSquare className="h-2.5 w-2.5" />
                           )}
-                          Send SMS
+                          <span className="hidden sm:inline">Send SMS</span>
                         </Button>
                       )}
                     </div>
