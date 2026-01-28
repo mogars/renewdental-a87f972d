@@ -314,7 +314,7 @@ export const WeeklyView = ({
                               : apt.status === "cancelled"
                                 ? "bg-destructive/20 text-destructive border-l-destructive hover:bg-destructive/30"
                                 : cn(appointmentColors.bg, appointmentColors.text, appointmentColors.border)
-                          )
+                          )}
                         >
                           <div className="font-medium truncate">
                             {apt.patients?.first_name} {apt.patients?.last_name?.charAt(0)}.
