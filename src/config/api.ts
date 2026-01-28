@@ -13,6 +13,17 @@ export const config = {
         console.error("Failed to parse saved config", e);
       }
     }
+    
+    // Auto-detect backend URL from current page's hostname
+    // Uses same hostname/IP as frontend, just with port 3001
+    if (typeof window !== 'undefined') {
+      const protocol = window.location.protocol; // http: or https:
+      const hostname = window.location.hostname; // IP or hostname
+      const backendUrl = `${protocol}//${hostname}:3001`;
+      return backendUrl;
+    }
+    
+    // Fallback for SSR or non-browser environments
     return import.meta.env.VITE_AWS_API_URL || 'http://localhost:3001';
   }
 };
