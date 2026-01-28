@@ -56,13 +56,26 @@ const Patients = () => {
   });
 
   const filteredPatients = patients?.filter((patient) => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      patient.first_name.toLowerCase().includes(searchLower) ||
-      patient.last_name.toLowerCase().includes(searchLower) ||
-      patient.email?.toLowerCase().includes(searchLower) ||
-      patient.phone?.includes(searchQuery)
-    );
+    const searchLower = searchQuery.toLowerCase().trim();
+    if (!searchLower) return true;
+
+    const tokens = searchLower.split(/\s+/).filter(Boolean);
+
+    const first = patient.first_name.toLowerCase();
+    const last = patient.last_name.toLowerCase();
+    const email = patient.email?.toLowerCase() || "";
+    const phone = (patient.phone || "").replace(/\D/g, "");
+
+    // All tokens must match at least one field (allow multi-word searches like "tudor florin")
+    return tokens.every((tok) => {
+      const tokDigits = tok.replace(/\D/g, "");
+      return (
+        first.includes(tok) ||
+        last.includes(tok) ||
+        email.includes(tok) ||
+        (tokDigits && phone.includes(tokDigits))
+      );
+    });
   });
 
   return (
