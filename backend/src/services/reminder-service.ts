@@ -109,6 +109,17 @@ async function processReminders() {
     const now = new Date();
     const systemTime = now.toLocaleString('ro-RO');
 
+    // Enforce sending window: only send between 09:00 and 21:00 Bucharest time
+    try {
+        const bucharestHour = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Bucharest', hour: '2-digit', hour12: false }).format(now), 10);
+        if (isFinite(bucharestHour) && (bucharestHour < 9 || bucharestHour >= 21)) {
+            console.log(`[REMINDER SERVICE] Current Bucharest hour ${bucharestHour} outside 09:00-21:00 window — skipping send.`);
+            return;
+        }
+    } catch (err) {
+        console.warn('[REMINDER SERVICE] Could not determine Bucharest hour, proceeding with caution.', err);
+    }
+
     console.log(`[REMINDER SERVICE SCAN] System Time: ${systemTime}`);
 
     const apiKey = await getSetting('textbee_api_key');
