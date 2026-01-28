@@ -8,16 +8,15 @@ async function getSetting(key: string): Promise<string | null> {
 
 async function sendSMS(to: string, body: string, apiKey: string, deviceId: string) {
     try {
-        const response = await fetch('https://api.textbee.dev/api/v1/gateway/devices/send-sms', {
+        const response = await fetch(`https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/send-sms`, {
             method: 'POST',
             headers: {
                 'x-api-key': apiKey,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                deviceId: deviceId,
-                to: to,
-                body: body
+                recipients: [to],
+                message: body
             })
         });
         const data = await response.json();
@@ -122,10 +121,13 @@ async function processReminders() {
 
     const creds = { apiKey, deviceId };
 
-    // Thresholds with JS-driven absolute safety
-    await processThreshold('1h Reminder', 0, 1, 'sms_enabled_1h', 'sms_template_1h', 'reminder_sent_1h', creds);
-    await processThreshold('2h Reminder', 1, 2, 'sms_enabled_2h', 'sms_template_2h', 'reminder_sent_2h', creds);
-    await processThreshold('24h Reminder', 2, 24, 'sms_enabled_24h', 'sms_template_24h', 'reminder_sent_24h', creds);
+    // Thresholds with JS-driven absolute safety (use ranges similar to lambda implementation)
+    // 1h window: ~0.917 - 1.083 hours (≈55-65 minutes)
+    await processThreshold('1h Reminder', 0.917, 1.083, 'sms_enabled_1h', 'sms_template_1h', 'reminder_sent_1h', creds);
+    // 2h window: ~1.917 - 2.083 hours (≈115-125 minutes)
+    await processThreshold('2h Reminder', 1.917, 2.083, 'sms_enabled_2h', 'sms_template_2h', 'reminder_sent_2h', creds);
+    // 24h window: ~23 - 25 hours
+    await processThreshold('24h Reminder', 23, 25, 'sms_enabled_24h', 'sms_template_24h', 'reminder_sent_24h', creds);
 
     console.log(`[REMINDER SERVICE SCAN] Done`);
 }
