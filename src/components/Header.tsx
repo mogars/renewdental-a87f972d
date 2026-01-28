@@ -1,10 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Shield } from "lucide-react";
+import { LogOut, User, Shield, Menu, X } from "lucide-react";
 
 const Header = () => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const { user, logout, isAdmin } = useAuth();
 
@@ -44,6 +46,16 @@ const Header = () => {
               </Link>
             ))}
           </nav>
+
+          {/* Mobile menu button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
         </div>
 
         <div className="flex items-center gap-4">
@@ -65,6 +77,29 @@ const Header = () => {
           </Button>
         </div>
       </div>
+
+      {/* Mobile menu dropdown */}
+      {mobileMenuOpen && (
+        <nav className="border-t border-border/50 bg-card/90 md:hidden">
+          <div className="container flex flex-col gap-1 py-2">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                  location.pathname === item.href
+                    ? "bg-secondary text-secondary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      )}
     </header>
   );
 };
