@@ -254,43 +254,12 @@ export const WeeklyView = ({
                           <div className="font-medium truncate">
                             {apt.patients?.first_name} {apt.patients?.last_name?.charAt(0)}.
                           </div>
-                          {totalAppointments > 1 && doctorName && (
-                            <div className="text-[9px] font-semibold opacity-90 truncate">
-                              {doctorName}
-                            </div>
-                          )}
+
                           <div className="text-[10px] opacity-75 truncate">
                             {apt.start_time.slice(0, 5)}
                           </div>
 
-                          <div className="mt-1 flex gap-0.5">
-                            <TooltipProvider>
-                              {apt.reminder_sent_24h && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>24h Sent</TooltipContent>
-                                </Tooltip>
-                              )}
-                              {apt.reminder_sent_2h && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>2h Sent</TooltipContent>
-                                </Tooltip>
-                              )}
-                              {apt.reminder_sent_1h && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>1h Sent</TooltipContent>
-                                </Tooltip>
-                              )}
-                            </TooltipProvider>
-                          </div>
+                          {/* Reminder indicators removed */}
                         </button>
                       );
                     })}
