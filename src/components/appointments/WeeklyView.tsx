@@ -94,13 +94,73 @@ export const WeeklyView = ({
     return doctor ? `Dr. ${doctor.first_name.charAt(0)}. ${doctor.last_name}` : "";
   };
 
-  const getAppointmentsForDayAndHour = (date: Date, hour: number) => {
-    return appointments.filter((apt) => {
-      if (!isSameDay(parseISO(apt.appointment_date), date)) return false;
-      const aptHour = parseInt(apt.start_time.split(":")[0], 10);
-      return aptHour === hour;
+  // Build per-day layout mapping that groups overlapping appointments
+  const buildDayLayouts = () => {
+    const layouts: Record<string, { index: number; total: number }> = {};
+
+    // Helper to convert HH:MM to minutes since midnight
+    const toMinutes = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    };
+
+    // Process each day separately
+    days.forEach((day) => {
+      const dayApts = appointments
+        .filter((apt) => isSameDay(parseISO(apt.appointment_date), day))
+        .map((apt) => ({ ...apt, startMin: toMinutes(apt.start_time), endMin: toMinutes(apt.end_time) }))
+        .sort((a, b) => a.startMin - b.startMin);
+
+      // Split into overlapping groups (clusters)
+      const groups: { apts: typeof dayApts }[] = [];
+      dayApts.forEach((apt) => {
+        const lastGroup = groups[groups.length - 1];
+        if (!lastGroup) {
+          groups.push({ apts: [apt] });
+        } else {
+          const groupEnd = Math.max(...lastGroup.apts.map((g) => g.endMin));
+          if (apt.startMin <= groupEnd) {
+            lastGroup.apts.push(apt);
+          } else {
+            groups.push({ apts: [apt] });
+          }
+        }
+      });
+
+      // For each group, assign columns using greedy interval partitioning
+      groups.forEach((group) => {
+        const columns: number[] = []; // stores endMin per column
+
+        group.apts.forEach((apt) => {
+          let placed = false;
+          for (let i = 0; i < columns.length; i++) {
+            if (apt.startMin >= columns[i]) {
+              // place in this column
+              layouts[apt.id] = { index: i, total: 0 } as any;
+              columns[i] = apt.endMin;
+              placed = true;
+              break;
+            }
+          }
+          if (!placed) {
+            // new column
+            columns.push(apt.endMin);
+            layouts[apt.id] = { index: columns.length - 1, total: 0 } as any;
+          }
+        });
+
+        // After assignment, set total columns for each appointment in the group
+        const totalCols = columns.length;
+        group.apts.forEach((apt) => {
+          layouts[apt.id].total = totalCols;
+        });
+      });
     });
+
+    return layouts;
   };
+
+  const dayLayouts = buildDayLayouts();
 
   const getAppointmentPosition = (startTime: string, endTime: string, index: number, total: number) => {
     const [startHour, startMin] = startTime.split(":").map(Number);
@@ -109,7 +169,7 @@ export const WeeklyView = ({
     const duration = (endHour - startHour) * 60 + (endMin - startMin);
     const height = (duration / 60) * 100;
 
-    // Calculate width and position for side-by-side display
+    // Calculate width and position for side-by-side display using per-group totals
     const width = total > 1 ? 100 / total : 100;
     const left = index * width;
 
@@ -199,9 +259,10 @@ export const WeeklyView = ({
                 {format(new Date().setHours(hour, 0), "HH:mm")}
               </div>
               {days.map((day) => {
-                const hourAppointments = getAppointmentsForDayAndHour(day, hour);
                 const isToday = isSameDay(day, new Date());
-                const totalAppointments = hourAppointments.length;
+
+                const dayAppointments = appointments.filter((apt) => isSameDay(parseISO(apt.appointment_date), day));
+                const hourAppointments = dayAppointments.filter((apt) => parseInt(apt.start_time.split(":")[0], 10) === hour);
 
                 const formattedHour = hour.toString().padStart(2, '0') + ':00';
 
@@ -229,8 +290,9 @@ export const WeeklyView = ({
                       <Plus className="h-3 w-3" />
                     </Button>
 
-                    {hourAppointments.map((apt, index) => {
-                      const position = getAppointmentPosition(apt.start_time, apt.end_time, index, totalAppointments);
+                    {hourAppointments.map((apt) => {
+                      const layout = dayLayouts[apt.id] ?? { index: 0, total: 1 };
+                      const position = getAppointmentPosition(apt.start_time, apt.end_time, layout.index, layout.total);
                       const appointmentColors = getAppointmentColor(apt);
                       const doctorName = getDoctorName(apt.doctor_id);
 
