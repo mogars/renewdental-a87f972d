@@ -14,7 +14,7 @@ import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { PatientCombobox } from "./PatientCombobox";
-import type { Patient, Doctor, TreatmentType, AppointmentWithPatient, Appointment, ChartRecord, Office } from "@/types/database";
+import type { Patient, Doctor, TreatmentType, AppointmentWithPatient, Appointment, ChartRecord } from "@/types/database";
 
 interface AppointmentFormProps {
   open: boolean;
@@ -49,17 +49,8 @@ export const AppointmentForm = ({
     endTime: "10:00",
     treatmentType: "",
     doctorId: "",
-    officeId: "",
     notes: "",
     status: "scheduled",
-  });
-
-  // Fetch active offices
-  const { data: offices } = useQuery({
-    queryKey: ["offices", "active"],
-    queryFn: async () => {
-      return apiGet<Office[]>("/offices");
-    },
   });
 
   // Fetch active doctors for the dropdown
@@ -120,7 +111,6 @@ export const AppointmentForm = ({
         endTime: editingAppointment.end_time.slice(0, 5),
         treatmentType: editingAppointment.treatment_type || "",
         doctorId: editingAppointment.doctor_id || "",
-        officeId: editingAppointment.office_id || "",
         notes: editingAppointment.notes || "",
         status: editingAppointment.status || "scheduled",
       });
@@ -139,7 +129,6 @@ export const AppointmentForm = ({
         endTime: endTime,
         treatmentType: "",
         doctorId: "",
-        officeId: "",
         notes: "",
         status: "scheduled",
       }));
@@ -161,7 +150,6 @@ export const AppointmentForm = ({
         end_time: formData.endTime,
         treatment_type: formData.treatmentType,
         doctor_id: formData.doctorId || null,
-        office_id: formData.officeId || null,
         dentist_name: dentistName,
         notes: formData.notes || null,
         status: formData.status,
@@ -213,7 +201,6 @@ export const AppointmentForm = ({
         end_time: formData.endTime,
         treatment_type: formData.treatmentType,
         doctor_id: formData.doctorId || null,
-        office_id: formData.officeId || null,
         dentist_name: dentistName,
         notes: formData.notes || null,
         status: formData.status,
@@ -396,31 +383,6 @@ export const AppointmentForm = ({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Office / Room *</Label>
-            <Select
-              value={formData.officeId}
-              onValueChange={(value) => setFormData((prev) => ({ ...prev, officeId: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select an office" />
-              </SelectTrigger>
-              <SelectContent>
-                {offices && offices.length > 0 ? (
-                  offices.map((office) => (
-                    <SelectItem key={office.id} value={office.id}>
-                      {office.name}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="no-offices" disabled>
-                    No offices available
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
