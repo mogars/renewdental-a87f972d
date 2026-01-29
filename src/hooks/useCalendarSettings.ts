@@ -10,6 +10,7 @@ export interface CalendarSettings {
   defaultView: "day" | "week" | "month";
   colorByDoctor: boolean;
   colorByTreatment: boolean;
+  showWeekends: boolean;
 }
 
 const DEFAULT_SETTINGS: CalendarSettings = {
@@ -20,6 +21,7 @@ const DEFAULT_SETTINGS: CalendarSettings = {
   defaultView: "week",
   colorByDoctor: true,
   colorByTreatment: false,
+  showWeekends: true,
 };
 
 const STORAGE_KEY = "calendar_display_settings";

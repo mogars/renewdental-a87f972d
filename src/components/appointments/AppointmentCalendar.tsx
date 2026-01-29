@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, parseISO, isWeekend } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/services/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,12 +67,20 @@ export const AppointmentCalendar = ({
     : appointments.filter((apt) => apt.doctor_id === selectedDoctorId);
 
   const weekStartsOn = (calendarSettings?.firstDayOfWeek ?? 1) as 0 | 1;
+  const showWeekends = calendarSettings?.showWeekends ?? true;
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn });
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn });
-  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  let days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  
+  // Filter out weekends if setting is disabled
+  if (!showWeekends) {
+    days = days.filter(day => !isWeekend(day));
+  }
+
+  const daysPerWeek = showWeekends ? 7 : 5;
 
   const weekDayLabels = weekStartsOn === 0
     ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -80,6 +88,21 @@ export const AppointmentCalendar = ({
   const weekDayLabelsMobile = weekStartsOn === 0
     ? ["S", "M", "T", "W", "T", "F", "S"]
     : ["M", "T", "W", "T", "F", "S", "S"];
+
+  // Filter day labels based on showWeekends setting
+  const displayWeekDayLabels = showWeekends 
+    ? weekDayLabels 
+    : weekDayLabels.filter((_, i) => {
+        const dayOfWeek = (weekStartsOn === 0 ? i : (i + 6) % 7);
+        return dayOfWeek !== 0 && dayOfWeek !== 6; // Filter out Sunday (0) and Saturday (6)
+      });
+  
+  const displayWeekDayLabelsMobile = showWeekends 
+    ? weekDayLabelsMobile 
+    : weekDayLabelsMobile.filter((_, i) => {
+        const dayOfWeek = (weekStartsOn === 0 ? i : (i + 6) % 7);
+        return dayOfWeek !== 0 && dayOfWeek !== 6; // Filter out Sunday (0) and Saturday (6)
+      });
 
   const getAppointmentsForDay = (date: Date) => {
     return filteredAppointments.filter(
@@ -207,8 +230,8 @@ export const AppointmentCalendar = ({
         ) : view === "month" ? (
           <div className="overflow-hidden rounded-lg border border-border">
             {/* Day headers */}
-            <div className="grid grid-cols-7 bg-muted">
-              {(isMobile ? weekDayLabelsMobile : weekDayLabels).map((day, i) => (
+            <div className={cn("grid bg-muted", showWeekends ? "grid-cols-7" : "grid-cols-5")}>
+              {(isMobile ? displayWeekDayLabelsMobile : displayWeekDayLabels).map((day, i) => (
                 <div
                   key={`${day}-${i}`}
                   className="border-b border-r border-border p-1 sm:p-2 text-center text-xs sm:text-sm font-medium text-muted-foreground last:border-r-0"
@@ -219,11 +242,13 @@ export const AppointmentCalendar = ({
             </div>
 
             {/* Calendar grid */}
-            <div className="grid grid-cols-7">
+            <div className={cn("grid", showWeekends ? "grid-cols-7" : "grid-cols-5")}>
               {days.map((day, index) => {
                 const dayAppointments = getAppointmentsForDay(day);
                 const isToday = isSameDay(day, new Date());
                 const isCurrentMonth = isSameMonth(day, currentDate);
+                const isLastInRow = (index + 1) % daysPerWeek === 0;
+                const isLastRow = index >= days.length - daysPerWeek;
 
                 return (
                   <div
@@ -235,8 +260,8 @@ export const AppointmentCalendar = ({
                     className={cn(
                       "min-h-[60px] sm:min-h-[100px] border-b border-r border-border p-0.5 sm:p-1 transition-colors hover:bg-muted/50 cursor-pointer",
                       !isCurrentMonth && "bg-muted/30",
-                      index % 7 === 6 && "border-r-0",
-                      index >= days.length - 7 && "border-b-0"
+                      isLastInRow && "border-r-0",
+                      isLastRow && "border-b-0"
                     )}
                   >
                     <div className="flex items-center justify-between">

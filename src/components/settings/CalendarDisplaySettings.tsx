@@ -15,6 +15,7 @@ interface CalendarSettings {
   defaultView: "day" | "week" | "month";
   colorByDoctor: boolean;
   colorByTreatment: boolean;
+  showWeekends: boolean;
 }
 
 const DEFAULT_SETTINGS: CalendarSettings = {
@@ -25,6 +26,7 @@ const DEFAULT_SETTINGS: CalendarSettings = {
   defaultView: "week",
   colorByDoctor: true,
   colorByTreatment: false,
+  showWeekends: true,
 };
 
 const STORAGE_KEY = "calendar_display_settings";
@@ -167,6 +169,19 @@ export const CalendarDisplaySettings = () => {
           <Switch
             checked={settings.colorByTreatment}
             onCheckedChange={(checked) => setSettings(prev => ({ ...prev, colorByTreatment: checked, colorByDoctor: checked ? false : prev.colorByDoctor }))}
+          />
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div>
+            <Label>Afișează Weekenduri</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Arată zilele de weekend (sâmbătă și duminică) în calendar
+            </p>
+          </div>
+          <Switch
+            checked={settings.showWeekends}
+            onCheckedChange={(checked) => setSettings(prev => ({ ...prev, showWeekends: checked }))}
           />
         </div>
       </div>

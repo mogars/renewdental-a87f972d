@@ -1,4 +1,4 @@
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO, isWeekend } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/services/api";
 import { Button } from "@/components/ui/button";
@@ -50,12 +50,18 @@ export const WeeklyView = ({
   const dayEndHour = calendarSettings?.dayEndHour ?? 20;
   const colorByDoctor = calendarSettings?.colorByDoctor ?? true;
   const colorByTreatment = calendarSettings?.colorByTreatment ?? false;
+  const showWeekends = calendarSettings?.showWeekends ?? true;
 
   const HOURS = Array.from({ length: dayEndHour - dayStartHour }, (_, i) => i + dayStartHour);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn });
-  const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  let days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  
+  // Filter out weekends if setting is disabled
+  if (!showWeekends) {
+    days = days.filter(day => !isWeekend(day));
+  }
 
   // Fetch doctors to create color mapping
   const { data: doctors } = useQuery({
@@ -221,7 +227,7 @@ export const WeeklyView = ({
         )}
 
         {/* Header with days */}
-        <div className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-border">
+        <div className={cn("grid border-b border-border", showWeekends ? "grid-cols-[80px_repeat(7,1fr)]" : "grid-cols-[80px_repeat(5,1fr)]")}>
           <div className="border-r border-border p-2" />
           {days.map((day) => {
             const isToday = isSameDay(day, new Date());
@@ -254,7 +260,7 @@ export const WeeklyView = ({
           {HOURS.map((hour) => (
             <div
               key={hour}
-              className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-border"
+              className={cn("grid border-b border-border", showWeekends ? "grid-cols-[80px_repeat(7,1fr)]" : "grid-cols-[80px_repeat(5,1fr)]")}
             >
               <div className="border-r border-border p-1 text-right text-[10px] text-muted-foreground sm:p-2 sm:text-xs">
                 {format(new Date().setHours(hour, 0), "HH:mm")}
