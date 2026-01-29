@@ -15,12 +15,15 @@ export const config = {
     }
     
     // Auto-detect backend URL from current page's hostname
-    // Uses same hostname/IP as frontend, just with port 3001
+    // Use same-origin /api in production to avoid exposing port 3001
     if (typeof window !== 'undefined') {
       const protocol = window.location.protocol; // http: or https:
       const hostname = window.location.hostname; // IP or hostname
-      const backendUrl = `${protocol}//${hostname}:3001`;
-      return backendUrl;
+      const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+      if (isLocalhost) {
+        return `${protocol}//${hostname}:3001`;
+      }
+      return `${protocol}//${hostname}/api`;
     }
     
     // Fallback for SSR or non-browser environments
